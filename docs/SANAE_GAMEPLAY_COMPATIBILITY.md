@@ -277,3 +277,59 @@ Latest audited binary source: `70f0eef8edfc96956e50998c4033ca624ba38677`.
 Successful CI: https://github.com/1warriorscats1-sys/-/actions/runs/34246955442
 Artifact: https://github.com/1warriorscats1-sys/-/actions/runs/34246955442/artifacts/10064457261
 (18,722,289 bytes, non-expired at publication).
+
+## Multi-subscription collisions, umbrella HP bar, full target-array parity
+
+Two owner reports stayed open after the combat repair: the second (Marisa)
+playable character deals no contact damage, and the umbrella durability bar
+renders black/invisible instead of the purple HP fill. Both now have confirmed
+engine causes and source repairs; hardware confirmation still requires the
+Switch artifact below.
+
+* Missing contact damage: when one instance held several collision handlers
+  matching the same partner (for example the partner's object and its parent),
+  dispatch kept only the most specific subscription and skipped the rest, so a
+  contact-damage handler could never run. Pairs are now booked once per frame
+  while every matching subscription on both sides fires exactly once; the
+  reverse side still joins the first notification, preserving capture-before-
+  destruction. Native tests cover both orders, motion/self-destruction during
+  the first handler, late spawning, solids, one-sided handlers and misses.
+* Umbrella HP bar: `draw_healthbar` always filled left-to-right, ignored the
+  fill direction, never drew the black border, and read the optional
+  background/border flags out of bounds. The replacement implements all four
+  directions, clamped amount, optional background and border; native tests
+  record every rectangle through a renderer spy.
+* Target arrays generalized from `instance_place` to all nineteen
+  collision/instance builtins (`place/meeting`, `collision_*`,
+  `*_list`, `distance_to_object`, `instance_nearest/furthest/exists/destroy`):
+  scalar behavior is unchanged, first hitting element wins, `*_list` unions
+  dedupe shared descendants, and `ordered=true` sorts by caller distance
+  (previously ignored, silently returning grid order).
+* `instance_exists`/`instance_destroy` previously crashed or mis-resolved
+  `self`/`other`/`all`/array targets (`exists(all)` reported whether object
+  -3 exists; `destroy` dereferenced small ids as object indices). Both are
+  reimplemented with snapshot iteration so destroy events that spawn or
+  destroy cannot corrupt the loop.
+* New builtins: `json_parse`/`json_stringify` (struct/array JSON with a depth
+  cap; the legacy `json_decode`/`json_encode` cover only ds containers),
+  `string_width_ext` (was a zero stub collapsing wrapped-text layout),
+  `show_error` (logs; abort requests a clean exit instead of running past a
+  fatal game path), `to_string`, `texturegroup_*`, texture/sprite
+  prefetch/flush shims, `draw_texture_flush`, `draw_enable_drawevent`
+  (suppresses only normal Draw events; Begin/End/GUI unaffected),
+  `random_get_seed` (backed by a new `Random.lastSeed`), and
+  `display_get_width/height` reporting the real window with game-default
+  fallback.
+* `random_set_seed(seed)` read a second argument unconditionally; guarded.
+* Switch pad 0 followed the system default pad while slots 1-7 bound fixed
+  controllers, so player 1 could hop between physical pads; every slot now
+  binds its own controller with unchanged enumeration.
+* A planned sprite-margin adjustment was dropped: re-audit shows the
+  inclusive-margin/half-open-interval math is self-consistent, and no failing
+  case could be reproduced. It must not be reinvented without a reproducer.
+
+Headless build and the full native suite pass locally
+(`scripts/build_sanae.py --target headless`, then
+`scripts/test_sanae_runner.py`). Switch compilation and the NRO artifact come
+from CI on push; this section must not claim hardware parity until the owner
+confirms the purple umbrella fill and Marisa contact damage on device.

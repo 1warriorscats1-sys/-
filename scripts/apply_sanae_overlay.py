@@ -151,17 +151,25 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
     replace('src/runner.c', 'static void dispatchCollisionEvents(Runner* runner) {',
             '#include "sanae_collision_dispatch.inc"\n\n'
             'static void dispatchCollisionEvents(Runner* runner) {\n'
-            '    struct { uint64_t key; uint8_t value; } *sanaePairs = nullptr;')
+            '    struct { uint64_t key; uint64_t value; } *sanaePairs = nullptr;')
+    # Every matching subscription fires exactly once per pair: the first hit
+    # notifies both sides (bilateral, resource-ordered), later visits by the
+    # same side fire only their own additional subscription, and the reverse
+    # bucket fires only subscriptions the reverse pass did not already run.
     replace('src/runner.c', '                    if (other == self) continue;', """                    if (other == self) continue;
                     if (!self->active) break;
-                    // Resolve the most specific applicable target once per pair.
-                    if (evt != findSymmetricCollisionEvent(runner, self, other)) continue;
                     uint32_t lo = self->instanceId < other->instanceId ? self->instanceId : other->instanceId;
                     uint32_t hi = self->instanceId < other->instanceId ? other->instanceId : self->instanceId;
                     uint64_t sanaePairKey = ((uint64_t)lo << 32) | hi;
-                    if (hmgeti(sanaePairs, sanaePairKey) >= 0) continue;""")
+                    ptrdiff_t sanaePairIndex = hmgeti(sanaePairs, sanaePairKey);
+                    if (sanaePairIndex >= 0) {
+                        uint64_t sanaePairValue = sanaePairs[sanaePairIndex].value;
+                        if ((uint32_t)(sanaePairValue >> 32) != self->instanceId &&
+                            (uint32_t)sanaePairValue == evt->targetObjectIndex) continue;
+                    }""")
     replace('src/runner.c', '                    // Collision detected! If either instance is solid, restore both to xprevious/yprevious.',
-            '                    hmput(sanaePairs, sanaePairKey, 1);\n\n'
+            '                    bool sanaePairFresh = sanaePairIndex < 0;\n'
+            '                    uint32_t sanaeReverseTarget = SANAE_COLLISION_NO_REVERSE;\n\n'
             '                    // Collision detected! If either instance is solid, restore both to xprevious/yprevious.')
     # Replace the pinned solid-only reverse notification block, retaining the
     # existing solid rollback/path/precise-mask logic on either side of it.
@@ -173,7 +181,13 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
     begin = collision_source.index(first)
     end = collision_source.index(last, begin)
     replace('src/runner.c', collision_source[begin:end],
-            '                    sanaeDispatchCollisionPair(runner, self, other, evt);\n\n')
+            '                    if (sanaePairFresh) {\n'
+            '                        sanaeReverseTarget = sanaeDispatchCollisionPair(runner, self, other, evt);\n'
+            '                        hmput(sanaePairs, sanaePairKey, ((uint64_t)self->instanceId << 32) | sanaeReverseTarget);\n'
+            '                    } else if (!runner->shouldExit) {\n'
+            '                        executeCollisionEvent(runner, self, other, (int32_t)evt->targetObjectIndex,\n'
+            '                                              evt->codeId, evt->ownerObjectIndex);\n'
+            '                    }\n\n')
     replace('src/runner.c', """        arrsetlen(runner->instanceSnapshots, selfSnapBase);
     }
 }
@@ -196,7 +210,34 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
     replace('src/runner.c', '// instance/layer: higher first',
             '// layers/particle systems: higher first')
     replace('src/runner.h', '#define OTHER_GAME_START     2', '#define OTHER_GAME_START     2\n#define OTHER_GAME_END       3')
-    replace('src/runner.h', '    bool shouldExit;', '    bool shouldExit;\n    bool sanaeSaveFailed;')
+    replace('src/runner.h', '    bool shouldExit;', '    bool shouldExit;\n    bool sanaeSaveFailed;\n    bool sanaeDrawEventsEnabled;')
+    # draw_enable_drawevent(false) suppresses only the normal Draw event; the
+    # instance still draws its sprite, and Begin/End/GUI drawing is unaffected.
+    replace('src/runner.c', '    runner->appSurfaceEnabled = true;',
+            '    runner->appSurfaceEnabled = true;\n    runner->sanaeDrawEventsEnabled = true;')
+    replace('src/runner.c',
+            '            int32_t codeId = findEventCodeIdAndOwner(runner, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, &ownerObjectIndex);\n'
+            '            if (codeId >= 0) {',
+            '            int32_t codeId = findEventCodeIdAndOwner(runner, inst->objectIndex, EVENT_DRAW, DRAW_NORMAL, &ownerObjectIndex);\n'
+            '            if (!runner->sanaeDrawEventsEnabled) codeId = -1;\n'
+            '            if (codeId >= 0) {')
+    # random_get_seed reports the seed random_set_seed/randomize installed.
+    replace('src/random.h', '    uint32_t state[16];\n    uint32_t index;',
+            '    uint32_t state[16];\n    uint32_t index;\n    uint32_t lastSeed;')
+    replace('src/random.c', 'void Random_setSeed(Random* m, uint32_t seed) {\n    m->state[0] = seed;',
+            'void Random_setSeed(Random* m, uint32_t seed) {\n    m->lastSeed = seed;\n    m->state[0] = seed;')
+    # random_set_seed takes one argument; do not read past it.
+    replace('src/vm_builtins.c', '    bool fixRangeBug = RValue_toBool(args[1]); ',
+            '    bool fixRangeBug = argCount > 1 && RValue_toBool(args[1]);')
+    # Slot 0 follows the system default pad while slots 1-7 bind No2-No8, so
+    # player 1 can hop between physical controllers. Bind every slot to its
+    # own No1-No8 controller instead; enumeration is unchanged.
+    replace('src/switch/switch_input.c', '''        padInitializeDefault(&pads[0]);
+        for (int i = 1; SWITCH_NPAD_COUNT > i; i++) {
+            padInitialize(&pads[i], HidNpadIdType_No1 + i);
+        }''', '''        for (int i = 0; SWITCH_NPAD_COUNT > i; i++) {
+            padInitialize(&pads[i], HidNpadIdType_No1 + i);
+        }''')
     # game_restart destroys the game's controller DS lists, not the physical pads.
     # Re-emit discovery once after the new room's Create events. connectedPrev is
     # overwritten by beginFrame, so resetting that field alone cannot work.

@@ -8,7 +8,7 @@ on:
         required: true
         type: string
   push:
-    branches: [arena/01a080a0-repo]
+    branches: [arena/01a080a0-repo, arena/01a081f7-repo]
     paths: [.github/workflows/sanae-private-probe.yml]
 permissions:
   contents: read
