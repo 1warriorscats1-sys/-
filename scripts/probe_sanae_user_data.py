@@ -62,8 +62,10 @@ HOOK = r'''
         }
 
         int wantContact = (!strncmp(scenario, "room_", 5) || !strncmp(scenario, "umbrella_room_", 14) ||
-                           !strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9));
-        int wantGuard = (!strcmp(scenario, "umbrella") || !strncmp(scenario, "umbrella_room_", 14));
+                           !strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9) ||
+                           !strncmp(scenario, "audit_", 6));
+        int wantGuard = (!strcmp(scenario, "umbrella") || !strncmp(scenario, "umbrella_room_", 14) ||
+                         !strncmp(scenario, "audit_", 6));
 
         /* --- compact per-frame audit (before any action this call) --- */
         if ((wantContact || wantGuard) && runnerProbe && frame > 0) {
@@ -150,7 +152,7 @@ HOOK = r'''
         }
 
         /* --- deliberate probe actions (once per scenario, only when in game) --- */
-        if (strcmp(scenario, "baseline")) {
+        if (strcmp(scenario, "baseline") && strncmp(scenario, "audit_", 6)) {
             static int probeSpawnDone = 0, probeRoomEntered = 0;
             int inGame = playerProbe != NULL && runnerProbe != NULL;
             const char *roomNow = runnerProbe && runnerProbe->currentRoom && runnerProbe->currentRoom->name
@@ -225,6 +227,26 @@ def tail(lines, count=22, width=240):
     out = []
     for line in lines[-count:]:
         out.append(line[:width])
+    return out
+
+
+def crash_section(log, max_lines=34, width=170):
+    """Signal line + backtrace frames from a gdb -batch log (skip register dump)."""
+    lines = log.splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if 'signal' in line.lower() or line.startswith('#'):
+            start = i
+            break
+    if start is None:
+        return tail(lines, count=18, width=width)
+    out = []
+    for line in lines[start:]:
+        if out and (line.startswith('rax ') or line.startswith('rip ') or line.startswith('eflags')):
+            break
+        out.append(line[:width])
+        if len(out) >= max_lines:
+            break
     return out
 
 
@@ -319,7 +341,7 @@ def main():
         backend.write_text(modified)
         subprocess.run(['cmake', '--build', '.cache/sanae-build-headless', '--parallel', '4'], cwd=ROOT, check=True)
         marisa_rooms = ['Room_s02b00_marisa', 'Room_sh02b00_marisa']
-        scenarios = ['baseline', 'obj_b02_KIRISAMEMarisa',
+        scenarios = ['baseline', 'audit_600', 'obj_b02_KIRISAMEMarisa',
                      'room_' + marisa_rooms[0], 'room_' + marisa_rooms[1],
                      'umbrella', 'umbrella_room_' + marisa_rooms[0]]
         for index, scenario in enumerate(scenarios):
@@ -331,8 +353,21 @@ def main():
                 inputs[str(frame + hold)] = {'keysPressed': [], 'keysReleased': [key]}
             end = 900
             frames = [610, 700, 850]
-            if scenario in ('baseline', 'obj_b02_KIRISAMEMarisa'):
+            if scenario == 'obj_b02_KIRISAMEMarisa':
+                # Dumps before the forced spawn (fires at frame >= 600) so a
+                # pre-action crash is distinguishable from a spawn crash.
                 start_keys(inputs, edge)
+                frames = [350, 450, 550, 590, 700, 850]
+            elif scenario == 'baseline':
+                start_keys(inputs, edge)
+            elif scenario == 'audit_600':
+                # Control: audits whether Sanae, the shield guard, or any Marisa
+                # object exists during menu/title/loading without any deliberate
+                # action. Forced scenarios abort near frame ~3426 (run 8), long
+                # before the first frame dump; start dumps at the abort - 25.
+                start_keys(inputs, edge)
+                end = 2000
+                frames = [150, 300, 450, 610, 700, 1000]
             elif scenario == 'umbrella':
                 start_keys(inputs, edge)
                 edge(580, 88, 100); edge(720, 40, 30); edge(1000, 88, 900)
@@ -393,7 +428,8 @@ def main():
                     gdb_log = (error.stdout or b'').decode(errors='replace')
                     gdb_log += '\n[gdb timed out]'
                 (case / 'crash.log').write_text(gdb_log)
-                record['crash_log_tail'] = tail(gdb_log.splitlines())
+                record['crash_section'] = crash_section(gdb_log)
+                record['log_tail'] = tail(log.splitlines(), count=25)
             report['probes'].append(record)
             REPORT.write_text(json.dumps(report, indent=2))
         report.update(status='probes completed', completed=True,
