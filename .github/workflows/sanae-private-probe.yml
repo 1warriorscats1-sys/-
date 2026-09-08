@@ -1,4 +1,4 @@
-# Download through current gdown URL interface; expose only sanitized diagnostics.
+# Download through positional gdown URL interface; expose only sanitized diagnostics.
 name: SANAE user-data investigation
 on:
   workflow_dispatch:

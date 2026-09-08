@@ -20,7 +20,7 @@ def main():
     try:
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{9,127}', os.environ.get('SANAE_USER_ARCHIVE_ID', '')):
             raise ValueError('Expected a Google Drive file ID')
-        subprocess.run(['gdown', '--fuzzy', 'https://drive.google.com/file/d/' + os.environ['SANAE_USER_ARCHIVE_ID'] + '/view',
+        subprocess.run(['gdown', 'https://drive.google.com/file/d/' + os.environ['SANAE_USER_ARCHIVE_ID'] + '/view',
                         '-O', str(archive)], check=True, timeout=300, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         with py7zr.SevenZipFile(archive, 'r') as reader:
             selected = []
