@@ -41,10 +41,10 @@ jobs:
       - name: Нативные тесты с санитайзерами
         run: python3 scripts/test_th01_native.py --sanitize
 
-      - name: Симуляция: boot, card, boss, death, determinism
+      - name: "Симуляция: boot, card, boss, death, determinism"
         run: python3 scripts/build_th01.py --target headless --frames 1800
 
-      - name: Host-сборка: кадры, WAV и превью
+      - name: "Host-сборка: кадры, WAV и превью"
         run: python3 scripts/build_th01.py --target host --frames 900 --every 10
 
       - name: Артефакты хоста
