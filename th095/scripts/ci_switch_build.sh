@@ -111,11 +111,11 @@ if [ -f th095/scripts/crash_offsets.txt ]; then
         echo "### crash offset resolution (ELF: th095/build-switch/th095)"
         [ -f "$ELF_FILE" ] && echo "### ELF for addr2line: $ELF_FILE ($(stat -c%s "$ELF_FILE") B)"
         for off in $(grep -oE "0x[0-9a-fA-F]+" th095/scripts/crash_offsets.txt); do
-            res=$(aarch64-none-elf-addr2line -f -C -e "$ELF_FILE" "$off" 2>&1 | tr '\n' ' | ')
+            res=$(aarch64-none-elf-addr2line -f -C -e "$ELF_FILE" "$off" 2>&1 | tr '\n' ' | ' | cut -c1-240)
             echo "$off => $res"
         done
     } > /tmp/ci-syms.txt 2>&1
     cat /tmp/ci-syms.txt
-    python3 -c 't=open("/tmp/ci-syms.txt").read(); [print("::notice file=th095/scripts/crash_offsets.txt::" + c.replace(chr(10), " \\n ")) for c in [t[i:i+900] for i in range(0, len(t), 900)][:12]]'
+    python3 -c 't=open("/tmp/ci-syms.txt").read(); [print("::notice file=th095/scripts/crash_offsets.txt::" + c.replace(chr(10), " \\n ")) for c in [t[i:i+800] for i in range(0, len(t), 800)][:24]]'
 fi
 exit 0

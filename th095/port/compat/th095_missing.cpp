@@ -8,6 +8,7 @@
 // Bodies marked TODO(port) are minimal safe placeholders; correct
 // behaviour requires disassembly-level fidelity work against the
 // original th095.exe 1.02a (see ATTRIBUTION.md).
+<string.h>
 #include "inttypes.hpp"
 #include "ZunMath.hpp"
 #include "ZunResult.hpp"
@@ -941,8 +942,14 @@ void SupervisorInputWorkerView::Stop() { /* TODO(port) */ }
 AnmVm::AnmVm() { }
 AnmVm::~AnmVm() { }
 
-// TODO(port): zero-init of unknown fields once layout is confirmed
-CSoundManager::CSoundManager() { }
+// The real class (zwave.hpp, namespace th095) has exactly one member,
+// LPDIRECTSOUND8 m_pDS, and no virtual functions — the object is 8 bytes.
+// CSoundManager::Initialize runs SAFE_RELEASE(m_pDS) BEFORE
+// DirectSoundCreate8 fills it in; with heap garbage there it dispatches
+// a virtual call through an uninitialized vtable (Atmosphere crash
+// 2168-0001: instruction abort in the data section on the
+// SoundPlayer worker thread). Zero the member.
+CSoundManager::CSoundManager() { memset(this, 0, sizeof(void *)); }
 
 // TODO(port): zero-init of unknown fields once layout is confirmed
 PhotoEnemyManagerTaskView::PhotoEnemyManagerTaskView() { }
