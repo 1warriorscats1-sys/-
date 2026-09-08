@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application>
+  <Title>
+    <Language>AmericanEnglish</Language>
+    <Name>SANAE's Sylphid Breeze</Name>
+    <Publisher>sorehodoh</Publisher>
+  </Title>
+  <Title>
+    <Language>Japanese</Language>
+    <Name>SANAE's Sylphid Breeze</Name>
+    <Publisher>sorehodoh</Publisher>
+  </Title>
+  <Isbn></Isbn>
+  <StartupUserAccount>Required</StartupUserAccount>
+  <TouchScreenUsage>Supported</TouchScreenUsage>
+  <AttributeFlag>None</AttributeFlag>
+  <SupportedLanguage>AmericanEnglish</SupportedLanguage>
+  <SupportedLanguage>Japanese</SupportedLanguage>
+  <ParentalControl>None</ParentalControl>
+  <Screenshot>Allow</Screenshot>
+  <VideoCapture>Enable</VideoCapture>
+  <DataLossConfirmation>Required</DataLossConfirmation>
+  <PlayLogPolicy>All</PlayLogPolicy>
+  <PresenceGroupId>0x010000000005a1e1</PresenceGroupId>
+  <Rating>
+    <Organization>CERO</Organization>
+    <Age>12</Age>
+  </Rating>
+  <Rating>
+    <Organization>ESRB</Organization>
+    <Age>10</Age>
+  </Rating>
+  <DisplayVersion>1.01a</DisplayVersion>
+  <AddOnContentBaseId>0x010000000005b1e1</AddOnContentBaseId>
+  <SaveDataOwnerId>0x010000000005a1e1</SaveDataOwnerId>
+  <UserAccountSaveDataSize>0x400000</UserAccountSaveDataSize>
+  <UserAccountSaveDataJournalSize>0x180000</UserAccountSaveDataJournalSize>
+  <DeviceSaveDataSize>0x0</DeviceSaveDataSize>
+  <DeviceSaveDataJournalSize>0x0</DeviceSaveDataJournalSize>
+  <BcatDeliveryCacheStorageSize>0x0</BcatDeliveryCacheStorageSize>
+  <ApplicationErrorCodeCategory></ApplicationErrorCodeCategory>
+  <LocalCommunicationId>0x010000000005a1e1</LocalCommunicationId>
+  <LogoType>LicensedByNintendo</LogoType>
+  <LogoHandling>Auto</LogoHandling>
+  <RuntimeAddOnContentInstall>Deny</RuntimeAddOnContentInstall>
+  <CrashReport>Deny</CrashReport>
+  <Hdcp>None</Hdcp>
+  <SeedForPseudoDeviceId>0x010000000005a1e1</SeedForPseudoDeviceId>
+  <BcatPassphrase></BcatPassphrase>
+  <UserAccountSaveDataSizeMax>0x0</UserAccountSaveDataSizeMax>
+  <UserAccountSaveDataJournalSizeMax>0x0</UserAccountSaveDataJournalSizeMax>
+  <DeviceSaveDataSizeMax>0x0</DeviceSaveDataSizeMax>
+  <DeviceSaveDataJournalSizeMax>0x0</DeviceSaveDataJournalSizeMax>
+  <TemporaryStorageSize>0x0</TemporaryStorageSize>
+  <CacheStorageSize>0x0</CacheStorageSize>
+  <CacheStorageJournalSize>0x0</CacheStorageJournalSize>
+  <CacheStorageDataAndJournalSizeMax>0x0</CacheStorageDataAndJournalSizeMax>
+  <CacheStorageIndexMax>0x0</CacheStorageIndexMax>
+  <PlayLogQueryCapability>None</PlayLogQueryCapability>
+  <Repair>None</Repair>
+  <ProgramIndex>0</ProgramIndex>
+  <RequiredNetworkServiceLicenseOnLaunch>None</RequiredNetworkServiceLicenseOnLaunch>
+</Application>

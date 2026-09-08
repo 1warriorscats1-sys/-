@@ -1,0 +1,15 @@
+# Local game/build inputs and outputs
+*.nsp
+*.zip
+/game.win
+/build-inputs/runtime-*/
+/build-inputs/*.jpg
+/work/
+/build-010*/
+__pycache__/
+*.pyc
+.venv/
+keys.dat
+prod.keys
+
+.cache/

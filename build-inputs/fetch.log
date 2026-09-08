@@ -1,0 +1,190 @@
++ curl -sSL --retry 3 -o build-inputs/files.json https://sorastream.dev/zeusnx/files.json
+++ stat -c%s build-inputs/files.json
++ echo 'files.json rc=0 size=1497'
+files.json rc=0 size=1497
++ head -c 3000 build-inputs/files.json
+[
+   {
+      "name":"2022.0.3.99",
+	  "date":"2026-04-11",
+      "size":"22885269",
+      "note":"Latest LTS",
+      "file":"runtime-2022.0.3.99.7z"
+   },
+   {
+	  "name":"2022.0.1.30",
+	  "date":"2026-05-09",
+      "size":"19869442",
+      "note":"LTS!\n\nThe second (official) release of LTS to be exact.",
+      "file":"runtime-2022.0.1.30.7z" 
+   },
+   {
+	  "name":"2023.8.1.148",
+	  "date":"2026-05-09",
+      "size":"20076772",
+      "note":"New!",
+      "file":"runtime-2023.8.1.148.7z"
+   },
+   {
+      "name":"2023.8.2.152",
+	  "date":"2026-04-11",
+      "size":"20364356",
+      "note":"i dunno what to say about this one\n\ndid you know? uhh now you do.",
+      "file":"runtime-2023.8.2.152.7z"
+   },
+      {
+      "name":"2023.11.1.160",
+	  "date":"2026-04-11",
+      "size":"20393315",
+      "note":"WARNING: Seems to be insanely broken for some reason, i have NO idea why.",
+      "file":"runtime-2023.11.1.160.7z"
+   },
+   {
+      "name":"2024.14.3.260",
+	  "date":"2026-04-11",
+      "size":"23515792",
+      "note":"well it was latest when i was first making this.",
+      "file":"runtime-2024.14.3.260.7z"
+   },
+      {
+      "name":"2024.14.1.253",
+	  "date":"2026-09-04",
+      "size":"23515792",
+      "note":"woaw.",
+      "file":"runtime-2024.14.1.253.7z"
+   },
+   {
+      "name":"2024.14.4.268",
+	  "date":"2026-04-11",
+      "size":"23413321",
+      "note":"Latest Monthly\n\nNOTE: Saving seems to be broken on this runtime.",
+      "file":"runtime-2024.14.4.268.7z"
+   }
+]+ curl -sSL --retry 3 -o runtime.7z https://sorastream.dev/zeusnx/runtime-2024.14.3.260.7z
+++ stat -c%s runtime.7z
++ echo 'runtime rc=0 size=23515792'
+runtime rc=0 size=23515792
++ mkdir -p rt
++ cd rt
++ 7z x -y ../runtime.7z
+
+7-Zip 23.01 (x64) : Copyright (c) 1999-2023 Igor Pavlov : 2023-06-20
+ 64-bit locale=C.UTF-8 Threads:2 OPEN_MAX:65536
+
+Scanning the drive for archives:
+1 file, 23515792 bytes (23 MiB)
+
+Extracting archive: ../runtime.7z
+--
+Path = ../runtime.7z
+Type = 7z
+Physical Size = 23515792
+Headers Size = 386
+Method = LZMA2:25
+Solid = +
+Blocks = 2
+
+Everything is Ok
+
+Folders: 2
+Files: 9
+Size:       35539034
+Compressed: 23515792
++ echo 'extract rc=0'
+extract rc=0
++ echo '=== runtime tree ==='
+=== runtime tree ===
++ find rt -type f -printf '%s\t%p\n'
++ sort -rn
++ head -60
+20712359	rt/bin/subsdk0
+5976956	rt/bin/sdk
+4981684	rt/bin/main
+3415764	rt/bin/subsdk1
+417913	rt/runtime-2024.14.3.260.xdelta
+20480	rt/lib/YYSwitchOutputLib.nro
+8178	rt/bin/rtld
+4096	rt/lib/YYSwitchOutputLib.nrr
+1604	rt/bin/main.npdm
++ mkdir -p build-inputs/runtime-2024.14.3.260
++ cd rt
++ find . -type f '(' -path '*bin/*' -o -path '*lib/*' ')' -print0
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nrr
+++ dirname build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nrr
++ mkdir -p build-inputs/runtime-2024.14.3.260/lib
++ cp rt/./lib/YYSwitchOutputLib.nrr build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nrr
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nro
+++ dirname build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nro
++ mkdir -p build-inputs/runtime-2024.14.3.260/lib
++ cp rt/./lib/YYSwitchOutputLib.nro build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nro
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/bin/subsdk1
+++ dirname build-inputs/runtime-2024.14.3.260/bin/subsdk1
++ mkdir -p build-inputs/runtime-2024.14.3.260/bin
++ cp rt/./bin/subsdk1 build-inputs/runtime-2024.14.3.260/bin/subsdk1
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/bin/main.npdm
+++ dirname build-inputs/runtime-2024.14.3.260/bin/main.npdm
++ mkdir -p build-inputs/runtime-2024.14.3.260/bin
++ cp rt/./bin/main.npdm build-inputs/runtime-2024.14.3.260/bin/main.npdm
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/bin/main
+++ dirname build-inputs/runtime-2024.14.3.260/bin/main
++ mkdir -p build-inputs/runtime-2024.14.3.260/bin
++ cp rt/./bin/main build-inputs/runtime-2024.14.3.260/bin/main
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/bin/subsdk0
+++ dirname build-inputs/runtime-2024.14.3.260/bin/subsdk0
++ mkdir -p build-inputs/runtime-2024.14.3.260/bin
++ cp rt/./bin/subsdk0 build-inputs/runtime-2024.14.3.260/bin/subsdk0
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/bin/sdk
+++ dirname build-inputs/runtime-2024.14.3.260/bin/sdk
++ mkdir -p build-inputs/runtime-2024.14.3.260/bin
++ cp rt/./bin/sdk build-inputs/runtime-2024.14.3.260/bin/sdk
++ IFS=
++ read -r -d '' f
++ dst=build-inputs/runtime-2024.14.3.260/bin/rtld
+++ dirname build-inputs/runtime-2024.14.3.260/bin/rtld
++ mkdir -p build-inputs/runtime-2024.14.3.260/bin
++ cp rt/./bin/rtld build-inputs/runtime-2024.14.3.260/bin/rtld
++ IFS=
++ read -r -d '' f
++ curl -sSL --retry 3 -o build-inputs/steam_header.jpg https://cdn.akamai.steamstatic.com/steam/apps/3200060/header.jpg
+++ stat -c%s build-inputs/steam_header.jpg
++ echo 'header rc=0 size=59935'
+header rc=0 size=59935
++ curl -sSL --retry 3 -o build-inputs/steam_library.jpg https://cdn.akamai.steamstatic.com/steam/apps/3200060/library_600x900_2x.jpg
+++ stat -c%s build-inputs/steam_library.jpg
++ echo 'library rc=0 size=291110'
+library rc=0 size=291110
++ echo '=== MANIFEST ==='
+=== MANIFEST ===
++ find build-inputs -type f -printf '%s\t%p\n'
++ sort -rn
+20712359	build-inputs/runtime-2024.14.3.260/bin/subsdk0
+5976956	build-inputs/runtime-2024.14.3.260/bin/sdk
+4981684	build-inputs/runtime-2024.14.3.260/bin/main
+3415764	build-inputs/runtime-2024.14.3.260/bin/subsdk1
+291110	build-inputs/steam_library.jpg
+59935	build-inputs/steam_header.jpg
+20480	build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nro
+8178	build-inputs/runtime-2024.14.3.260/bin/rtld
+5563	build-inputs/fetch.log
+4096	build-inputs/runtime-2024.14.3.260/lib/YYSwitchOutputLib.nrr
+1604	build-inputs/runtime-2024.14.3.260/bin/main.npdm
+1497	build-inputs/files.json
+1296	build-inputs/MANIFEST.sha256
++ find build-inputs -type f '!' -name MANIFEST.sha256 -exec sha256sum '{}' ';'
++ du -sh build-inputs
+34M	build-inputs
++ exit 0
