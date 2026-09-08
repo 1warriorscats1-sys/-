@@ -6,6 +6,9 @@ on:
         description: User-supplied Google Drive file ID (assets stay ephemeral)
         required: true
         type: string
+  push:
+    branches: [arena/01a080a0-repo]
+    paths: [.github/workflows/sanae-private-probe.yml]
 permissions:
   contents: read
   checks: write
@@ -19,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: Download and inspect user-supplied archive (never publish assets)
         env:
-          SANAE_USER_ARCHIVE_ID: ${{ inputs.archive_id }}
+          SANAE_USER_ARCHIVE_ID: ${{ inputs.archive_id || '1HxUTGBgfss2CEuig81E_U1LKFxWD5Puw' }}
         run: |
           python3 -m pip install gdown py7zr
           python3 scripts/inspect_sanae_user_archive.py
