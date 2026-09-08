@@ -39,6 +39,7 @@ jobs:
       - name: Configure and build (host)
         run: |
           set +e
+          trap 'echo "::error file=.github/workflows/th095-build.yml::[diag] shell error near line $LINENO running: $BASH_COMMAND"' ERR
           cmake -S th095 -B th095/build-host -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DTH095_UPSTREAM_SRC="$GITHUB_WORKSPACE/build-inputs/th095-src" \
@@ -48,24 +49,26 @@ jobs:
           build_status=${PIPESTATUS[0]}
           if [ "$cfg_status" -ne 0 ] || [ "$build_status" -ne 0 ]; then
             {
-              echo "### Tools"
-              cmake --version | head -1; ninja --version; gcc --version | head -1
+              echo "### configure log (last 50 lines)"
+              tail -50 /tmp/ci-cfg.log
+              echo; echo "### build log (last 20 lines)"
+              tail -20 /tmp/ci-build.log
               echo; echo "### pkg-config module checks"
               pkg-config --exists SDL2 && echo "SDL2: OK" || echo "SDL2: MISSING"
               pkg-config --exists SDL2_ttf && echo "SDL2_ttf: OK" || echo "SDL2_ttf: MISSING"
               pkg-config --exists SDL2_image && echo "SDL2_image: OK" || echo "SDL2_image: MISSING"
+              echo; echo "### tools"
+              cmake --version | head -1; ninja --version; gcc --version | head -1
               echo; echo "### /usr/lib/x86_64-linux-gnu/pkgconfig (sdl/gl entries)"
               ls /usr/lib/x86_64-linux-gnu/pkgconfig/ 2>/dev/null | grep -iE 'sdl|gl' || echo "(none / dir missing)"
-              echo; echo "### configure log (last 60 lines)"
-              tail -60 /tmp/ci-cfg.log
-              echo; echo "### build log (last 40 lines)"
-              tail -40 /tmp/ci-build.log
-              echo; echo "### CMakeFiles/CMakeError.log (last 40 lines)"
-              tail -40 th095/build-host/CMakeFiles/CMakeError.log 2>/dev/null || true
-            } > /tmp/ci-diag.txt
+              echo; echo "### CMakeFiles/CMakeError.log (last 30 lines)"
+              tail -30 th095/build-host/CMakeFiles/CMakeError.log 2>/dev/null || true
+            } > /tmp/ci-diag.txt 2>&1
             echo "----- TH095 CI DIAGNOSTICS -----"
             cat /tmp/ci-diag.txt
-            # Channel A: GitHub issue (best effort)
+            # Channel A: check-run annotations (readable via API)
+            python3 -c 't=open("/tmp/ci-diag.txt").read(); [print("::error file=th095/CMakeLists.txt::" + c.replace(chr(10), " \\n ")) for c in [t[i:i+900] for i in range(0, len(t), 900)][:8]]'
+            # Channel B: GitHub issue (best effort)
             python3 -c 'import json,sys; print(json.dumps({"title": "[th095-ci-diag] run " + sys.argv[1], "body": "Auto-posted TH095 CI diagnostics (configure/build failure). Safe to close once the build is green."}))' "$GITHUB_RUN_ID" > /tmp/issue-payload.json
             issue_json=$(curl -sS -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues" -d @/tmp/issue-payload.json || echo "CURL_FAILED")
             issue_number=$(printf '%s' "$issue_json" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("number",""))' 2>/dev/null || true)
@@ -76,7 +79,7 @@ jobs:
             else
               echo "issue post failed: $(printf '%s' "$issue_json" | head -c 300)"
             fi
-            # Channel B: push diagnostics to the ci-diag branch (readable via git)
+            # Channel C: push diagnostics to the ci-diag branch (best effort)
             git config user.name "github-actions"
             git config user.email "actions@github.com"
             mkdir -p .ci-diag
