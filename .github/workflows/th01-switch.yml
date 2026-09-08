@@ -95,6 +95,14 @@ jobs:
             exit 1
           fi
 
+      - name: Лог сборки Switch
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TH01-switch-build-log
+          if-no-files-found: warn
+          path: dist/th01/switch/build.log
+
       - name: Загрузка результата
         uses: actions/upload-artifact@v4
         with:
