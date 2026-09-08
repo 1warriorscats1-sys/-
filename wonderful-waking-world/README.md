@@ -5,8 +5,12 @@ built the same way as the SANAE port in [`open-runner/`](../open-runner/README.m
 the open [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch) GameMaker
 runner is compiled for Switch with a small, game-specific integration overlay.
 
-> **Status: unbuilt scaffolding.** Nothing here has been compiled for Switch or
-> run on hardware yet. Treat every claim below as a build recipe, not a result.
+> **Status (2026-09-08): compiles, untested on hardware.** Both CI jobs pass:
+> the engine builds on Linux with the integration applied, and the Switch job
+> produces a `thwww.nro` whose embedded icon and NACP are verified. The overlay
+> applies cleanly to the pinned upstream commit, and the save/exit code passes
+> native tests under ASan/UBSan. Nothing has been run on a Switch, and no
+> gameplay, rendering or audio behaviour has been observed.
 
 ## What this is — and isn't
 
@@ -30,6 +34,8 @@ runner is compiled for Switch with a small, game-specific integration overlay.
 | `../scripts/create_www_icon.py` | 256×256 NRO icon (procedural placeholder by default) |
 | `../scripts/verify_www_nro.py` | validates the real NRO's embedded icon and NACP |
 | `../tests/test_thwww.py` | host tests for the icon, NACP verifier and overlay wiring |
+| `../tests/native/www_save.c` | functional tests: save rotation, crash recovery, frame policy |
+| `../scripts/test_thwww_native.py` | compiles and runs those tests, optionally sanitized |
 
 The engine revision is pinned in [`../open-runner/upstream.json`](../open-runner/upstream.json),
 shared with the SANAE port so both builds track one audited upstream commit.
@@ -38,6 +44,7 @@ shared with the SANAE port so both builds track one audited upstream commit.
 
 ```bash
 python3 -m unittest tests.test_thwww -v            # host checks, no toolchain needed
+python3 scripts/test_thwww_native.py --sanitize    # save/exit tests under ASan+UBSan
 python3 scripts/build_thwww.py --target headless   # engine + integration on Linux
 python3 scripts/build_thwww.py --target switch     # needs devkitPro/devkitA64/libnx
 ```
@@ -66,9 +73,11 @@ license; nothing of it is included here.
 
 ## Open work
 
-- Never compiled for Switch; both CI targets need a first green run.
-- Save/exit, audio-group indexing and draw ordering carry no thWWW-specific
-  repairs yet — the SANAE port needed several, and this game may need its own.
+- **Never run on hardware.** A green build is not a compatibility result.
+- Audio-group indexing and draw ordering carry no thWWW-specific repairs yet —
+  the SANAE port needed several before it behaved, and this game may need its own.
+- The artifact could not be inspected from this sandbox (Azure blob storage is
+  firewalled), so only CI's own NRO icon/NACP verification vouches for it.
 - Controller layout is a reasonable default, not one confirmed against the
   game's own input handling.
 - No rendering, performance or full-playthrough verification on hardware.

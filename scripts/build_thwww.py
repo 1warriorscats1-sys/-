@@ -110,7 +110,8 @@ def main():
         for relative in ['LICENSE.md', 'wonderful-waking-world',
                          'scripts/build_thwww.py', 'scripts/build_open_runner.py',
                          'scripts/apply_www_overlay.py', 'scripts/create_www_icon.py',
-                         'scripts/verify_www_nro.py', 'tests/test_thwww.py']:
+                         'scripts/verify_www_nro.py', 'scripts/test_thwww_native.py',
+                         'tests/test_thwww.py', 'tests/native/www_save.c']:
             archive.add(ROOT / relative, arcname='integration/' + relative)
         archive.add(output / 'BUILD.json', arcname='BUILD.json')
 

@@ -33,8 +33,8 @@ See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
 **[Touhou Nemuri Sekai ~ Wonderful Waking World (thWWW)](wonderful-waking-world/README.md)**
 reuses the same open-engine recipe in its own folder: integration overlay, build
 script, NRO asset verifier, host tests and CI producing `thwww.nro` for
-`sd:/switch/thwww/`. It is **unbuilt scaffolding** — never compiled for Switch and
-never run on hardware. No game data or artwork is included; the player supplies the
+`sd:/switch/thwww/`. Both CI jobs pass and the Switch job produces a
+verified `thwww.nro`, but it has **never been run on hardware**. No game data or artwork is included; the player supplies the
 original files from their own copy.
 
 The instructions below describe the **existing legacy proprietary-runtime toolkit**, not
