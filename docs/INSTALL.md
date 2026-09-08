@@ -4,7 +4,7 @@
 
 This toolkit is not a replacement game engine. You need:
 
-- Your legally owned **SANAE's Sylphid Breeze** Steam installation, containing `data.win` and audio archives.
+- Your legally owned **SANAE's Sylphid Breeze** Steam installation, containing `data.win`, audio archives, `scenario_sanae.csv` and `scenario_sanae_en.csv`.
 - Python **3.10 or newer** from python.org. On Windows, enable **Add Python to PATH**.
   The folder picker uses Tkinter (included with typical Windows Python installers).
   Linux users without Tkinter can pass the folder in a command instead.
@@ -55,6 +55,7 @@ If you already use the working exit fix, leave it in place. Source for private r
 | Message/symptom | What to do |
 |---|---|
 | Missing `data.win` | Select the game folder, not the Steam executable, shortcut or downloaded ZIP. |
+| Missing `scenario_sanae.csv` / `scenario_sanae_en.csv` | Verify your Steam installation; these external dialogue files are not inside `data.win`. |
 | Missing `audiogroupN.dat` | Verify your own Steam installation files; do not download audio packs from third parties. |
 | Unsupported revision / parser rejection | Keep your old working pack. Report the tool error and game version; do not attach game data. |
 | Output already exists | Choose another `--output` folder. Existing files are intentionally never replaced. |

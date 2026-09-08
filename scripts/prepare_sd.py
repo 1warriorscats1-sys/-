@@ -13,6 +13,10 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 TITLE_ID = '010000000005A1E1'
+# Referenced by the known game's dialogue loader, outside data.win.
+REQUIRED_INCLUDED_FILES = ('scenario_sanae.csv', 'scenario_sanae_en.csv')
+# The misspelling belongs to an additional object; don't invent a replacement.
+OPTIONAL_INCLUDED_FILES = ('scenaorio_sanae.csv', 'item.txt')
 # A previously verified converted file; never shipped or downloaded by this tool.
 KNOWN_CONVERTED = 'f8b816d0bea0cf35b6f6eb793fc49cf0aa948806a646abd245310ee2f727097f'
 
@@ -157,6 +161,12 @@ def prepare(game, output):
             if len(head) != 8 or head[:4] != b'FORM' or struct.unpack_from('<I', head, 4)[0]+8 != audio.stat().st_size:
                 raise InputError(f'{name} is not an intact GameMaker audio archive.')
             inputs[name] = audio
+    for name in REQUIRED_INCLUDED_FILES + OPTIONAL_INCLUDED_FILES:
+        included = find_file(game, name, required=name in REQUIRED_INCLUDED_FILES)
+        if included:
+            if included.stat().st_size == 0 and name in REQUIRED_INCLUDED_FILES:
+                raise InputError(f'{name} is empty. Verify the files in your own Steam installation.')
+            inputs[name] = included
     before = {name: sha256(path) for name, path in inputs.items()}
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.sanae-', dir=output.parent) as temp:

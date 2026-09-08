@@ -106,6 +106,8 @@ class PreparationTests(unittest.TestCase):
         self.game = self.root/'Steam folder with spaces и кириллица'; self.game.mkdir()
         (self.game/'data.win').write_bytes(fixture())
         (self.game/'audiogroup2.dat').write_bytes(audio())
+        for name in prep.REQUIRED_INCLUDED_FILES:
+            (self.game/name).write_text('id,text\n1,synthetic dialogue\n', encoding='utf-8')
         self.out = self.root/'new pack'
         self.steps = []
 
@@ -146,6 +148,42 @@ class PreparationTests(unittest.TestCase):
         (self.game/'audiogroup1.dat').write_bytes(audio())
         self.prepare()
         self.assertEqual(len(list(self.out.rglob('audiogroup1.dat'))), 1)
+
+    def test_required_dialogue_files_copied_unchanged(self):
+        self.prepare()
+        for name in prep.REQUIRED_INCLUDED_FILES:
+            copies = list(self.out.rglob(name))
+            self.assertEqual(len(copies), 1)
+            self.assertEqual(copies[0].read_bytes(), (self.game/name).read_bytes())
+            manifest = json.loads((self.out/'manifest.json').read_text())
+            self.assertEqual(manifest['inputs_sha256'][name], prep.sha256(self.game/name))
+
+    def test_missing_dialogue_fails_before_conversion(self):
+        for name in prep.REQUIRED_INCLUDED_FILES:
+            saved = (self.game/name).read_bytes()
+            (self.game/name).unlink()
+            with self.assertRaisesRegex(prep.InputError, name): self.prepare()
+            self.assertFalse(self.out.exists()); self.assertFalse(self.steps)
+            (self.game/name).write_bytes(saved)
+
+    def test_empty_dialogue_rejected(self):
+        (self.game/'scenario_sanae.csv').write_bytes(b'')
+        with self.assertRaisesRegex(prep.InputError, 'is empty'): self.prepare()
+        self.assertFalse(self.out.exists())
+
+    def test_optional_included_files_copied_only_when_present(self):
+        for name in prep.OPTIONAL_INCLUDED_FILES:
+            (self.game/name).write_bytes(b'synthetic optional asset')
+        self.prepare()
+        for name in prep.OPTIONAL_INCLUDED_FILES:
+            self.assertEqual(next(self.out.rglob(name)).read_bytes(), b'synthetic optional asset')
+
+    def test_included_names_are_case_insensitive(self):
+        for name in prep.REQUIRED_INCLUDED_FILES:
+            (self.game/name).rename(self.game/name.upper())
+        self.prepare()
+        for name in prep.REQUIRED_INCLUDED_FILES:
+            self.assertEqual(len(list(self.out.rglob(name))), 1)
 
     def test_missing_audio_fails_before_output(self):
         (self.game/'audiogroup2.dat').unlink()

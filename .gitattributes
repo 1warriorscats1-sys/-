@@ -3,3 +3,6 @@
 *.sh text eol=lf
 *.md text eol=lf
 *.cmd text eol=crlf
+
+# Keep the user-supplied historical chat in Git, not in source-download archives.
+"Новый текстовый документ (3).txt" export-ignore

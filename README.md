@@ -26,7 +26,7 @@ We do not provide a way to obtain the proprietary runtime.
 
 - **Bring your own Steam copy.** Select the folder opened by Steam → Manage → Browse local files.
 - **One local preparation step.** The tool converts `data.win`, adapts optional Steamworks calls for the
-  Switch environment, verifies the converted structures, and copies the required audio archives.
+  Switch environment, verifies the converted structures, and copies the required audio archives and dialogue CSV files.
 - **No manual renaming or hex editing.** The output is a ready-to-copy `atmosphere` directory.
 - **Original files stay untouched.** Preparation uses a temporary directory, checks hashes, and refuses
   to overwrite an existing output folder. It never writes to your SD card automatically.
@@ -57,7 +57,9 @@ sdcard-pack/                        # Generated locally; do NOT share
 ├── atmosphere/contents/010000000005A1E1/romfs/
 │   ├── game.win                    # Converted from your data.win
 │   ├── audiogroup2.dat              # Copied from your Steam installation
-│   └── …                           # Required external audio groups
+│   ├── …                           # Required external audio groups
+│   ├── scenario_sanae.csv           # Original Japanese dialogue
+│   └── scenario_sanae_en.csv        # Original English dialogue
 ├── INSTALL.txt
 ├── manifest.json                   # Input/output SHA-256; no PC folder paths
 └── prepare.log
@@ -65,7 +67,11 @@ sdcard-pack/                        # Generated locally; do NOT share
 
 All available `audiogroup1.dat` through `audiogroup18.dat` are copied. Only groups referenced by sounds
 are mandatory; the known build has an empty group 1. There is **no executable** in this output.
-Do not replace saves or delete the existing `exefs` directory.
+Do not replace saves or delete the existing `exefs` directory. Both dialogue CSV files are required;
+`scenaorio_sanae.csv` (the game's spelling) and `item.txt` are also copied if present.
+
+**Original Steam data without PC conversion:** see the [loader design and remaining blockers](docs/ORIGINAL_DATA.md).
+This is a planned runtime feature, not functionality provided by the current release.
 
 ## Why `data.win` cannot just be copied
 
