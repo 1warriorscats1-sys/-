@@ -123,3 +123,10 @@ jobs:
         with:
           name: th095-switch
           path: th095/build-switch/th095.nro
+
+      - name: Upload Switch ELF (with debug symbols, for crash analysis)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: th095-elf
+          path: th095/build-switch/th095

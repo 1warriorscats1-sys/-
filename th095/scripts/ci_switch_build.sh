@@ -82,6 +82,21 @@ if [ "$fetch_status" -ne 0 ] || [ "$patch_status" -ne 0 ] \
 fi
 
 echo "### artifact"
-ls -la th095/build-switch/th095.nro
+ls -la th095/build-switch/th095.nro th095/build-switch/th095
 aarch64-none-elf-nx-strings th095/build-switch/th095.nro 2>/dev/null | head -5 || true
+
+# Crash symbol resolution: if th095/scripts/crash_offsets.txt exists,
+# resolve every offset against the ELF (built with -g) and post the result
+# as check-run annotations (the only readable CI output channel).
+if [ -f th095/scripts/crash_offsets.txt ]; then
+    {
+        echo "### crash offset resolution (ELF: th095/build-switch/th095)"
+        for off in $(grep -oE "0x[0-9a-fA-F]+" th095/scripts/crash_offsets.txt); do
+            res=$(aarch64-none-elf-addr2line -f -C -e th095/build-switch/th095 "$off" 2>&1 | tr '\n' ' | ')
+            echo "$off => $res"
+        done
+    } > /tmp/ci-syms.txt 2>&1
+    cat /tmp/ci-syms.txt
+    python3 -c 't=open("/tmp/ci-syms.txt").read(); [print("::notice file=th095/scripts/crash_offsets.txt::" + c.replace(chr(10), " \\n ")) for c in [t[i:i+900] for i in range(0, len(t), 900)][:12]]'
+fi
 exit 0

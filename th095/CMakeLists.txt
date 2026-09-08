@@ -121,6 +121,10 @@ if(NINTENDO_SWITCH)
         bz2
         nx
         m)
+    # Bring-up: keep DWARF in the ELF so crash reports (module+offset) can be
+    # resolved with aarch64-none-elf-addr2line. Debug sections are not
+    # allocated, so the runtime layout (and NRO offsets) are unchanged.
+    target_compile_options(th095-port PRIVATE -g)
     set_target_properties(th095-port PROPERTIES OUTPUT_NAME "th095")
 
     # NACP: base English entry via nacptool, then the Japanese slot 2
