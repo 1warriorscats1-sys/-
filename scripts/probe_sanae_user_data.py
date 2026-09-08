@@ -75,21 +75,22 @@ HOOK = r'''
             const char *roomName = runnerProbe->currentRoom && runnerProbe->currentRoom->name
                                        ? runnerProbe->currentRoom->name : "?";
 
+            // Instance_getSelfVar reads any instance's self variable by varID
+            // (no STRUCT_OBJECT_INDEX requirement) and returns a weak view, so
+            // no RValue_free. VM_structGetVariableByVarId would abort on real
+            // game objects (they are not GML structs).
             if (playerProbe && shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
-                RValue v = VM_structGetVariableByVarId(playerProbe, shget(vmProbe->varNameMap, "hp_now"), -1);
+                RValue v = Instance_getSelfVar(playerProbe, shget(vmProbe->varNameMap, "hp_now"));
                 if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) playerHp = (float)RValue_toReal(v);
-                RValue_free(&v);
             }
             if (bossProbe && shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
-                RValue v = VM_structGetVariableByVarId(bossProbe, shget(vmProbe->varNameMap, "hp_now"), -1);
+                RValue v = Instance_getSelfVar(bossProbe, shget(vmProbe->varNameMap, "hp_now"));
                 if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) bossHp = (float)RValue_toReal(v);
-                RValue_free(&v);
                 if (firstBossFrame < 0) firstBossFrame = frame;
             }
             if (guardProbe && shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
-                RValue v = VM_structGetVariableByVarId(guardProbe, shget(vmProbe->varNameMap, "hp_now"), -1);
+                RValue v = Instance_getSelfVar(guardProbe, shget(vmProbe->varNameMap, "hp_now"));
                 if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) guardHp = (float)RValue_toReal(v);
-                RValue_free(&v);
             }
 
             InstanceBBox pb = {0}, bb = {0}, gb = {0};
