@@ -10,8 +10,6 @@ on:
       - "th095/**"
   workflow_dispatch:
 
-# The Switch NRO job will be added here once the switch_runtime.cpp backend
-# lands (see th095/README.md, "Status").
 
 jobs:
   # Host smoke build: compiles the pinned upstream reconstruction plus the
@@ -95,3 +93,33 @@ jobs:
         with:
           name: th095-host
           path: th095/build-host/th095-host
+
+  # Nintendo Switch NRO build: the pinned upstream + port layer compiled
+  # with the devkitA64 toolchain inside the official devkitpro/devkita64
+  # image (prebuilt toolchain + static portlibs; no toolchain build needed).
+  # CMake branch: th095/CMakeLists.txt (NINTENDO_SWITCH), backend sources
+  # in th095/port/ (switch_compat.cpp, gles_ffp.cpp, switch_runtime.cpp).
+  switch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull devkitPro Switch toolchain image
+        run: docker pull devkitpro/devkita64:latest
+
+      - name: Build TH095 Switch NRO
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -e GITHUB_WORKSPACE=/work \
+            devkitpro/devkita64:latest \
+            bash /work/th095/scripts/ci_switch_build.sh
+          status=$?
+          [ "$status" -eq 0 ]
+
+      - name: Upload Switch NRO
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: th095-switch
+          path: th095/build-switch/th095.nro

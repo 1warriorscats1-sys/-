@@ -1,9 +1,14 @@
 #include "d3d8_internal.hpp"
 
-
 #include <SDL.h>
+// SWITCH: instead of desktop GL — the GLES3 fixed-function shim
+// (macros redirect glBegin/glOrtho/... to ffp::).
+#ifdef __SWITCH__
+#include "gles_ffp.hpp"
+#else
 #include <GL/gl.h>
 #include <GL/glext.h>
+#endif
 
 #include <math.h>
 #include <new>
@@ -45,6 +50,21 @@ struct FramebufferApi
 
     bool Initialize()
     {
+#ifdef __SWITCH__
+        // SWITCH: in ES3 the FBO functions are core — take the
+        // addresses directly, no GetProcAddress needed.
+        genFramebuffers = reinterpret_cast<GenFramebuffersFunction>(&glGenFramebuffers);
+        bindFramebuffer = reinterpret_cast<BindFramebufferFunction>(&glBindFramebuffer);
+        framebufferTexture2D = reinterpret_cast<FramebufferTexture2DFunction>(&glFramebufferTexture2D);
+        checkFramebufferStatus = reinterpret_cast<CheckFramebufferStatusFunction>(&glCheckFramebufferStatus);
+        deleteFramebuffers = reinterpret_cast<DeleteFramebuffersFunction>(&glDeleteFramebuffers);
+        genRenderbuffers = reinterpret_cast<GenRenderbuffersFunction>(&glGenRenderbuffers);
+        bindRenderbuffer = reinterpret_cast<BindRenderbufferFunction>(&glBindRenderbuffer);
+        renderbufferStorage = reinterpret_cast<RenderbufferStorageFunction>(&glRenderbufferStorage);
+        framebufferRenderbuffer = reinterpret_cast<FramebufferRenderbufferFunction>(&glFramebufferRenderbuffer);
+        deleteRenderbuffers = reinterpret_cast<DeleteRenderbuffersFunction>(&glDeleteRenderbuffers);
+        return true;
+#else
         genFramebuffers = reinterpret_cast<GenFramebuffersFunction>(
             Load("glGenFramebuffers", "glGenFramebuffersEXT"));
         bindFramebuffer = reinterpret_cast<BindFramebufferFunction>(
@@ -71,6 +91,7 @@ struct FramebufferApi
                renderbufferStorage != NULL && framebufferRenderbuffer != NULL &&
                deleteRenderbuffers != NULL;
     }
+#endif
 
     GenFramebuffersFunction genFramebuffers;
     BindFramebufferFunction bindFramebuffer;
@@ -425,9 +446,14 @@ class LinuxDevice : public IDirect3DDevice8
         context = SDL_GL_CreateContext(window);
         if (context == NULL) return;
         SDL_GL_MakeCurrent(window, context);
+#ifdef __SWITCH__
+        // SWITCH: glFogCoordf does not exist in ES — take it from the shim.
+        g_fogCoordf = reinterpret_cast<FogCoordfFunction>(&ffp::FogCoordf);
+#else
         g_fogCoordf = reinterpret_cast<FogCoordfFunction>(SDL_GL_GetProcAddress("glFogCoordf"));
         if (g_fogCoordf == NULL)
             g_fogCoordf = reinterpret_cast<FogCoordfFunction>(SDL_GL_GetProcAddress("glFogCoordfEXT"));
+#endif
         SDL_GL_SetSwapInterval(parameters.FullScreen_PresentationInterval == D3DPRESENT_INTERVAL_IMMEDIATE ? 0 : 1);
         framebufferReady = ResetInternal(parameters);
         renderStates[D3DRS_TEXTUREFACTOR] = 0xffffffffu;
@@ -471,7 +497,31 @@ class LinuxDevice : public IDirect3DDevice8
         SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
         g_framebufferApi.bindFramebuffer(GL_FRAMEBUFFER, 0);
         glDrawBuffer(GL_BACK);
+#ifdef __SWITCH__
+        // SWITCH: letterbox the 4:3 scene centered, black bars, the
+        // blit quad spans the target rectangle (not the whole screen).
+        int targetLeft = 0, targetTop = 0;
+        int targetWidth = drawableWidth, targetHeight = drawableHeight;
+        if (drawableWidth > 0 && drawableHeight > 0)
+        {
+            if (static_cast<double>(drawableWidth) / drawableHeight > 4.0 / 3.0)
+            {
+                targetWidth = static_cast<int>(drawableHeight * 4.0 / 3.0);
+                targetLeft = (drawableWidth - targetWidth) / 2;
+            }
+            else
+            {
+                targetHeight = static_cast<int>(drawableWidth * 3.0 / 4.0);
+                targetTop = (drawableHeight - targetHeight) / 2;
+            }
+        }
+        glDisable(GL_SCISSOR_TEST);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glViewport(targetLeft, targetTop, targetWidth, targetHeight);
+#else
         glViewport(0, 0, drawableWidth, drawableHeight);
+#endif
 
         glPushAttrib(GL_ALL_ATTRIB_BITS);
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
@@ -482,21 +532,37 @@ class LinuxDevice : public IDirect3DDevice8
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
+#ifdef __SWITCH__
+        glOrtho(0.0, targetWidth, targetHeight, 0.0, -1.0, 1.0);
+#else
         glOrtho(0.0, drawableWidth, drawableHeight, 0.0, -1.0, 1.0);
+#endif
         glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
         glColor4ub(255, 255, 255, 255);
         glBegin(GL_TRIANGLE_STRIP);
         glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, 0.0f);
+#ifdef __SWITCH__
+        glTexCoord2f(1.0f, 1.0f); glVertex2f(static_cast<float>(targetWidth), 0.0f);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, static_cast<float>(targetHeight));
+        glTexCoord2f(1.0f, 0.0f); glVertex2f(static_cast<float>(targetWidth),
+                                             static_cast<float>(targetHeight));
+#else
         glTexCoord2f(1.0f, 1.0f); glVertex2f(static_cast<float>(drawableWidth), 0.0f);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, static_cast<float>(drawableHeight));
         glTexCoord2f(1.0f, 0.0f); glVertex2f(static_cast<float>(drawableWidth),
                                             static_cast<float>(drawableHeight));
+#endif
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
         glPopAttrib();
 
         glFlush();
         SDL_GL_SwapWindow(window);
+#ifdef __SWITCH__
+        // SWITCH: eglSwapBuffers on Horizon/Mesa does NOT block —
+        // pace 60 Hz ourselves, after the swap.
+        ffp::SwitchPace();
+#endif
 
         g_framebufferApi.bindFramebuffer(GL_FRAMEBUFFER, renderFramebuffer);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);

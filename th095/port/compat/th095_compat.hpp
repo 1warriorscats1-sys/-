@@ -19,6 +19,12 @@
 // The target was built with /Gr (default __fastcall); the reconstruction
 // annotates some declarations explicitly. All builds of the port use one
 // consistent ABI, so the annotation is a no-op.
+#ifdef __SWITCH__
+// newlib already defines __fastcall; drop its definition so the
+// redefinition below stays warning-free.
+#undef __fastcall
+#endif
+
 #ifndef __fastcall
 #define __fastcall
 #endif

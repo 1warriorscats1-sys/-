@@ -38,7 +38,6 @@ file(GLOB TH095_GAME_SOURCES
     ${TH095_UPSTREAM_SRC}/src/pbg/*.cpp)
 
 set(TH095_COMPAT_SOURCES
-    ${TH095_PORT_DIR}/port/compat/win32_compat.cpp
     ${TH095_PORT_DIR}/port/compat/d3d8_compat.cpp
     ${TH095_PORT_DIR}/port/compat/d3dx8_compat.cpp
     # Upstream declares but does not define ~230 production symbols (the
@@ -47,9 +46,14 @@ set(TH095_COMPAT_SOURCES
     ${TH095_PORT_DIR}/port/compat/th095_missing_globals.cpp)
 
 if(NINTENDO_SWITCH)
-    list(APPEND TH095_COMPAT_SOURCES ${TH095_PORT_DIR}/port/runtime/switch_runtime.cpp)
+    list(APPEND TH095_COMPAT_SOURCES
+        ${TH095_PORT_DIR}/port/compat/switch_compat.cpp
+        ${TH095_PORT_DIR}/port/compat/gles_ffp.cpp
+        ${TH095_PORT_DIR}/port/runtime/switch_runtime.cpp)
 else()
-    list(APPEND TH095_COMPAT_SOURCES ${TH095_PORT_DIR}/port/runtime/linux_runtime.cpp)
+    list(APPEND TH095_COMPAT_SOURCES
+        ${TH095_PORT_DIR}/port/compat/win32_compat.cpp
+        ${TH095_PORT_DIR}/port/runtime/linux_runtime.cpp)
 endif()
 
 add_executable(th095-port ${TH095_GAME_SOURCES} ${TH095_COMPAT_SOURCES})
@@ -74,29 +78,68 @@ target_include_directories(th095-port BEFORE PRIVATE
     ${TH095_UPSTREAM_SRC}/src)
 
 if(NINTENDO_SWITCH)
-    # devkitA64 (Switch.cmake) already sets -march, fPIE, __SWITCH__, -lnx.
-    # portlibs (SDL2, SDL2_ttf, SDL2_image, EGL/GLESv2, ...) are static.
-    find_package(SDL2 REQUIRED)
+    # devkitA64 (Switch.cmake) already sets -march, fPIE, __SWITCH__, -lnx;
+    # portlibs (SDL2*_ttf/image, freetype, harfbuzz, ...) are static.
+    set(TH095_DEVKITPRO "$ENV{DEVKITPRO}")
+    if(NOT TH095_DEVKITPRO)
+        set(TH095_DEVKITPRO "/opt/devkitpro")
+    endif()
+    if(NOT EXISTS "${TH095_DEVKITPRO}/cmake/Switch.cmake")
+        message(FATAL_ERROR
+            "devkitPro not found at ${TH095_DEVKITPRO}; set \$DEVKITPRO or install devkitA64.")
+    endif()
+    if(NOT EXISTS "${TH095_PORT_DIR}/icon.jpg")
+        message(FATAL_ERROR "icon.jpg (256x256 JPEG) not found in th095/.")
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+    # Portlib headers (GLES3/gl3.h, SDL2) come AFTER the port interceptors.
+    target_include_directories(th095-port BEFORE PRIVATE
+        ${TH095_DEVKITPRO}/portlibs/switch/include
+        ${TH095_DEVKITPRO}/portlibs/switch/include/SDL2)
+
+    # Static link order matters (dependencies go AFTER the libraries that
+    # use them; no name may appear twice):
+    #   SDL2_ttf -> harfbuzz -> freetype -> {z,bz2,png}; SDL2_image ->
+    #   png/jpeg/webp/avif; SDL2 -> EGL -> GLESv2 -> glapi/drm_nouveau.
     target_link_libraries(th095-port PRIVATE
-        SDL2::SDL2
-        SDL2::SDL2_ttf
-        SDL2::SDL2_image
+        SDL2_ttf
+        SDL2_image
+        SDL2
+        harfbuzz
+        freetype
+        png
+        jpeg
+        webp
+        webpdemux
+        avif
         EGL
-        GLESv2)
+        glapi
+        drm_nouveau
+        GLESv2
+        z
+        bz2
+        nx
+        m)
     set_target_properties(th095-port PROPERTIES OUTPUT_NAME "th095")
 
-    if(EXISTS ${CMAKE_SOURCE_DIR}/icon.jpg)
-        nx_generate_nacp(OUTPUT "${CMAKE_BINARY_DIR}/th095-base.nacp"
-            NAME "Shoot the Bullet"
-            AUTHOR "ZUN / Team Shanghai Alice")
-        nx_link_options(-nro -g
-            -nexflags "--unique=th095"
-            "--sdk-version=19.0.1"
-            "--titleid=010000000005A1E1"
-            "--nro-header=${CMAKE_BINARY_DIR}/th095.nhdr")
-        set_target_properties(th095-port PROPERTIES
-            LINK_DEPENDS "${CMAKE_BINARY_DIR}/th095.nhdr")
-    endif()
+    # NACP: base English entry via nacptool, then the Japanese slot 2
+    # (language records are not indexed by SetLanguage — see
+    # scripts/nacp_lang.py) written by a script.
+    nx_generate_nacp(OUTPUT "${CMAKE_BINARY_DIR}/th095-base.nacp"
+        NAME "Touhou 9.5: Shoot the Bullet"
+        AUTHOR "ZUN / Team Shanghai Alice"
+        VERSION "1.00")
+    add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/th095.nacp"
+        COMMAND ${Python3_EXECUTABLE} "${TH095_PORT_DIR}/scripts/nacp_lang.py"
+                "${CMAKE_BINARY_DIR}/th095-base.nacp" "${CMAKE_BINARY_DIR}/th095.nacp"
+        DEPENDS "${CMAKE_BINARY_DIR}/th095-base.nacp"
+                "${TH095_PORT_DIR}/scripts/nacp_lang.py"
+        VERBATIM)
+    # Output: th095 (elf) -> th095.nro.
+    nx_create_nro(th095-port
+        ICON "${TH095_PORT_DIR}/icon.jpg"
+        NACP "${CMAKE_BINARY_DIR}/th095.nacp")
 else()
     find_package(OpenGL REQUIRED)
     # pkg-config: distro SDL2(-ttf/-image) packages do not ship CMake config
