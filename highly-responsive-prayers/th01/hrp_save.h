@@ -19,6 +19,11 @@
 #if defined(__unix__) || defined(__APPLE__) || defined(__SWITCH__)
 #define HRP_SAVE_HAVE_FSYNC 1
 #include <unistd.h>
+#ifdef __SWITCH__
+/* libnx implements fsync() through its fsdev layer; declare it explicitly so
+ * the build does not depend on the newlib feature-test selection. */
+extern int fsync(int fd);
+#endif
 #endif
 
 #define HRP_SAVE_MAGIC   0x314f5248u /* "HRO1" little endian */

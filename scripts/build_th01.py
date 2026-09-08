@@ -155,6 +155,11 @@ def switch_toolchain() -> tuple[str, Path]:
 
 def target_switch() -> dict:
     prefix, devkitpro = switch_toolchain()
+    print(f"  DEVKITPRO={devkitpro}")
+    run([f"{prefix}gcc", "--version"], cwd=None)
+    for tool in ("nacptool", "elf2nro"):
+        found = shutil.which(tool) or (Path(devkitpro) / "tools" / "bin" / tool)
+        print(f"  tool {tool}: {found if found else 'NOT FOUND'}")
     out_dir = DIST / "switch"
     build_dir = DIST / "switch" / "obj"
     if build_dir.exists():
@@ -179,15 +184,17 @@ def target_switch() -> dict:
     elf = out_dir / "th01.elf"
     run([gcc, *objects, *ldflags, f"-Wl,-Map,{out_dir / 'th01.map'}", "-o", str(elf)])
 
+    nacptool = shutil.which("nacptool") or str(Path(devkitpro) / "tools" / "bin" / "nacptool")
     nacp = out_dir / "th01.nacp"
-    run(["nacptool", "--create", TITLE, AUTHOR, VERSION, str(nacp)])
+    run([nacptool, "--create", TITLE, AUTHOR, VERSION, str(nacp)])
 
     icon = out_dir / "th01-icon.jpg"
     if not icon.exists():
         run([sys.executable, str(ROOT / "scripts" / "create_th01_icon.py"), str(icon)])
 
+    elf2nro = shutil.which("elf2nro") or str(Path(devkitpro) / "tools" / "bin" / "elf2nro")
     nro = out_dir / "th01.nro"
-    run(["elf2nro", str(elf), str(nro), f"--icon={icon}", f"--nacp={nacp}"])
+    run([elf2nro, str(elf), str(nro), f"--icon={icon}", f"--nacp={nacp}"])
 
     completed = run([sys.executable, str(ROOT / "scripts" / "verify_th01_nro.py"), str(nro), "--json"])
     nacp_info = json.loads(completed.stdout.strip())

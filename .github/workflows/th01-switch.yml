@@ -72,7 +72,18 @@ jobs:
           apt-get install -y --no-install-recommends python3 python3-pil git make zip
 
       - name: Сборка NRO и архива исходников
-        run: python3 scripts/build_th01.py --target switch
+        run: |
+          set -o pipefail
+          mkdir -p dist/th01/switch
+          python3 scripts/build_th01.py --target switch 2>&1 | tee dist/th01/switch/build.log
+
+      - name: Лог сборки Switch (всегда)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TH01-switch-build-log
+          if-no-files-found: warn
+          path: dist/th01/switch/build.log
 
       - name: Загрузка результата
         uses: actions/upload-artifact@v4
