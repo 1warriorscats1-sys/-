@@ -61,6 +61,25 @@ HOOK = r'''
             else if (strstr(name, "KIRISAMEMarisa")) { if (!bossProbe) { bossProbe = a; bossName = name; } }
         }
 
+        /* One-shot object-name census: names that may be the ability pickup or
+           the shield (only useful for designing the umbrella scenarios). */
+        static int namesLogged = 0;
+        if (!namesLogged && runnerProbe && frame > 0) {
+            char namesBuf[900] = "";
+            for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i) {
+                const char *on = runnerProbe->dataWin->objt.objects[i].name;
+                if (!on) continue;
+                if (strstr(on, "gurad") || strstr(on, "kasa") || strstr(on, "es02") ||
+                    strstr(on, "Kogasa") || strstr(on, "KIRISA") ||
+                    (strstr(on, "item") || strstr(on, "take")) ||
+                    (!strncmp(on, "obj_app_", 8))) {
+                    if (strlen(namesBuf) < 840) { strcat(namesBuf, on); strcat(namesBuf, ","); }
+                }
+            }
+            logInfo("SANAE_NAMES %s\n", namesBuf[0] ? namesBuf : "-");
+            namesLogged = 1;
+        }
+
         int wantContact = (!strncmp(scenario, "room_", 5) || !strncmp(scenario, "umbrella_room_", 14) ||
                            !strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9) ||
                            !strncmp(scenario, "audit_", 6));
@@ -203,12 +222,18 @@ HOOK = r'''
         */
         if (strcmp(scenario, "baseline") && strncmp(scenario, "audit_", 6)) {
             const char *chaseEnv = getenv("SANAE_PROBE_CHASE");
+            const char *chaseStartEnv = getenv("SANAE_PROBE_CHASE_START");
+            const char *chaseEndEnv = getenv("SANAE_PROBE_CHASE_END");
             const char *guardEnv = getenv("SANAE_PROBE_GUARDSPAWN");
             const char *feedEnv = getenv("SANAE_PROBE_FEED");
+            const char *captureEnv = getenv("SANAE_PROBE_CAPTURE");
             int chase = chaseEnv && atoi(chaseEnv) > 0;
+            int chaseStart = chaseStartEnv ? atoi(chaseStartEnv) : 1500;
+            int chaseEnd = chaseEndEnv ? atoi(chaseEndEnv) : 4800;
             int guardSpawn = guardEnv && atoi(guardEnv) > 0;
             int feed = feedEnv && atoi(feedEnv) > 0;
-            static int probeSpawnDone = 0, probeRoomEntered = 0, probeGuardSpawned = 0;
+            int capture = captureEnv && atoi(captureEnv) > 0;
+            static int probeSpawnDone = 0, probeRoomEntered = 0, probeGuardSpawned = 0, probePickupSpawned = 0;
             int inGame = playerProbe != NULL && runnerProbe != NULL;
             const char *roomNow = runnerProbe && runnerProbe->currentRoom && runnerProbe->currentRoom->name
                                       ? runnerProbe->currentRoom->name : NULL;
@@ -233,7 +258,22 @@ HOOK = r'''
                 probeSpawnDone = 1;
             }
 
-            if (guardSpawn && !probeGuardSpawned && inGame && frame >= 700 && frame <= 2500 && playerProbe) {
+            /* Ability capture: drop the Kogasa-umbrella pickup in front of
+               Sanae (frame 620); the input side walks her into it (700-920)
+               and raises the shield with X from frame 1000 on. */
+            if (capture && !probePickupSpawned && inGame && frame >= 620 && frame <= 1200 && playerProbe) {
+                const char *cand[] = {"obj_app_es02", "obj_item_es02", "obj_take_es02"};
+                for (int ci = 0; ci < 3 && !probePickupSpawned; ++ci) {
+                    for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
+                        if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, cand[ci])) {
+                            Runner_createInstance(runnerProbe, playerProbe->x + 64.0f, playerProbe->y, (int)i);
+                            probePickupSpawned = 1;
+                            break;
+                        }
+                }
+            }
+
+            if (guardSpawn && !probeGuardSpawned && !guardProbe && inGame && frame >= 1300 && frame <= 2500 && playerProbe) {
                 for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
                     if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, "obj_p01s02e02_gurad")) {
                         Runner_createInstance(runnerProbe, playerProbe->x + 40.0f, playerProbe->y, (int)i);
@@ -242,8 +282,7 @@ HOOK = r'''
                 probeGuardSpawned = 1;
             }
 
-            if (feed && probeGuardSpawned && guardProbe && runnerProbe &&
-                frame >= 1100 && frame <= 2200 && frame % 40 == 0) {
+            if (feed && guardProbe && runnerProbe && frame >= 1300 && frame <= 2300 && frame % 40 == 0) {
                 const char *spawn = "obj_b02e03_starS_shot";
                 float x = guardProbe->x + 24, y = guardProbe->y - 10;
                 for (int k = 0; k < 3; ++k) {
@@ -268,7 +307,7 @@ HOOK = r'''
                 }
             }
 
-            if (chase && bossProbe && playerProbe && frame >= 1500 && frame <= 4800) {
+            if (chase && bossProbe && playerProbe && frame >= chaseStart && frame <= chaseEnd) {
                 /* Walk Sanae onto Marisa's body and keep pressing: contact test.
                    Crude (teleports ~2px/frame, ignores solids) but the audit's
                    over/touch/ov columns plus SANAE_DROP lines classify any
@@ -471,12 +510,14 @@ def main():
         subprocess.run(['cmake', '--build', '.cache/sanae-build-headless', '--parallel', '4'], cwd=ROOT, check=True)
         marisa_rooms = ['Room_s02b00_marisa', 'Room_sh02b00_marisa']
         scenarios = [('baseline', {}),
-                     ('obj_b02_KIRISAMEMarisa', {}),
+                     ('obj_b02_KIRISAMEMarisa', {'SANAE_PROBE_CHASE': '1',
+                                                 'SANAE_PROBE_CHASE_START': '850',
+                                                 'SANAE_PROBE_CHASE_END': '1650'}),
                      ('room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1'}),
                      ('room_' + marisa_rooms[1], {'SANAE_PROBE_CHASE': '1'}),
-                     ('umbrella', {'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_FEED': '1'}),
+                     ('umbrella', {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_FEED': '1'}),
                      ('umbrella_room_' + marisa_rooms[0],
-                      {'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_CHASE': '1'})]
+                      {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_CHASE': '1'})]
         for index, (scenario, probe_env) in enumerate(scenarios):
             case = work / str(index)
             case.mkdir(exist_ok=True)
@@ -484,38 +525,45 @@ def main():
             def edge(frame, key, hold=1):
                 inputs[str(frame)] = {'keysPressed': [key], 'keysReleased': []}
                 inputs[str(frame + hold)] = {'keysPressed': [], 'keysReleased': [key]}
+            def z_taps(step, first, last):
+                for frame in range(first, last, step):
+                    edge(frame, 90)
             end = 900
             frames = [610, 850]
             if scenario == 'obj_b02_KIRISAMEMarisa':
-                # Dumps straddle the forced spawn (fires at frame >= 600).
+                # Contact test: boss spawns on Sanae at >=600, chase from 850.
                 start_keys(inputs, edge)
-                end = 1500
-                frames = [400, 550, 640, 900, 1300]
+                end = 1700
+                frames = [640, 900, 1300, 1650]
             elif scenario == 'baseline':
                 start_keys(inputs, edge)
             elif scenario.startswith('room_'):
-                # Enter the boss room via pendingRoom at >=600, then dodge taps
-                # keep Sanae alive until the hook chase parks her on Marisa.
+                # pendingRoom at >=600; Z taps dismiss the boss intro dialog
+                # (run 11 showed the room but stayed in game=dialog all run),
+                # chase then parks Sanae on Marisa.
                 start_keys(inputs, edge)
                 end = 4800
                 frames = [1100, 1500, 2000, 3200, 4600]
-                for frame in range(900, 4800, 240):
-                    edge(frame, 39 if (frame // 240) % 2 == 0 else 37, 200)
+                z_taps(45, 660, 4750)
             elif scenario == 'umbrella':
-                # Directly spawn the shield guard next to Sanae (env flag) and
-                # hand-feed Marisa stars into it (env flag); no ability capture
-                # required, so plain menu taps are enough.
+                # Ability capture: pickup spawns in front of Sanae at 620, she
+                # walks right into it (700-920), raises the shield with X from
+                # 1000; stars are hand-fed into it from 1300 (durability test).
                 start_keys(inputs, edge)
-                end = 2400
-                frames = [750, 900, 1150, 1400, 1700, 2300]
+                end = 2600
+                frames = [800, 1100, 1300, 1600, 2000, 2500]
+                edge(700, 39, 220)   # walk right into the pickup
+                edge(1000, 88, 900)  # hold X: raise / keep the umbrella shield
             elif scenario.startswith('umbrella_room_'):
-                # Spawn the guard in the tutorial, enter the real Marisa room,
-                # and chase so guard+Sanae face the boss bullet pattern.
+                # Same capture in the tutorial, then enter the real Marisa room
+                # at 1200; Z taps dismiss the fight dialog; chase drags guard
+                # and Sanae into the boss bullet pattern.
                 start_keys(inputs, edge)
                 end = 4800
-                frames = [900, 1400, 2000, 3200, 4600]
-                for frame in range(900, 4800, 240):
-                    edge(frame, 39 if (frame // 240) % 2 == 0 else 37, 200)
+                frames = [900, 1300, 1600, 2400, 3400, 4600]
+                edge(700, 39, 220)
+                edge(1000, 88, 3300)  # hold X through the whole fight
+                z_taps(45, 1260, 4700)
             (case / 'inputs.json').write_text(json.dumps(inputs))
             args = [str(ROOT / '.cache/sanae-build-headless/butterscotch'), str(data),
                     '--headless', '--exit-at-frame', str(end), '--playback-inputs', str(case / 'inputs.json'),
