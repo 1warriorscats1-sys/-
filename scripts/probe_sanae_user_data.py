@@ -83,14 +83,49 @@ HOOK = r'''
                 RValue v = Instance_getSelfVar(playerProbe, shget(vmProbe->varNameMap, "hp_now"));
                 if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) playerHp = (float)RValue_toReal(v);
             }
-            if (bossProbe && shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
-                RValue v = Instance_getSelfVar(bossProbe, shget(vmProbe->varNameMap, "hp_now"));
-                if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) bossHp = (float)RValue_toReal(v);
+            // One-time discovery: which self var actually carries boss/guard HP?
+            static int bossVarsLogged = 0, guardVarsLogged = 0;
+            const char *hpCands[] = {"hp_now", "hp", "hit_point", "guard_hp", "durability", "hp_max"};
+            if (bossProbe && !bossVarsLogged) {
+                bossVarsLogged = 1;
+                for (int ci = 0; ci < (int)(sizeof(hpCands) / sizeof(hpCands[0])); ++ci) {
+                    ptrdiff_t cs = shgeti(vmProbe->varNameMap, hpCands[ci]);
+                    if (cs < 0) continue;
+                    RValue cv = Instance_getSelfVar(bossProbe, shget(vmProbe->varNameMap, hpCands[ci]));
+                    if (cv.type == RVALUE_REAL || cv.type == RVALUE_INT32)
+                        logInfo("SANAE_BOSSVAR name=%s v=%g\n", hpCands[ci], (float)RValue_toReal(cv));
+                }
+            }
+            if (guardProbe && !guardVarsLogged) {
+                guardVarsLogged = 1;
+                for (int ci = 0; ci < (int)(sizeof(hpCands) / sizeof(hpCands[0])); ++ci) {
+                    ptrdiff_t cs = shgeti(vmProbe->varNameMap, hpCands[ci]);
+                    if (cs < 0) continue;
+                    RValue cv = Instance_getSelfVar(guardProbe, shget(vmProbe->varNameMap, hpCands[ci]));
+                    if (cv.type == RVALUE_REAL || cv.type == RVALUE_INT32)
+                        logInfo("SANAE_GUARDVAR name=%s v=%g\n", hpCands[ci], (float)RValue_toReal(cv));
+                }
+            }
+            if (bossProbe) {
+                if (shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
+                    RValue v = Instance_getSelfVar(bossProbe, shget(vmProbe->varNameMap, "hp_now"));
+                    if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) bossHp = (float)RValue_toReal(v);
+                }
+                if (bossHp < 0 && shgeti(vmProbe->varNameMap, "hp") >= 0) {
+                    RValue v = Instance_getSelfVar(bossProbe, shget(vmProbe->varNameMap, "hp"));
+                    if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) bossHp = (float)RValue_toReal(v);
+                }
                 if (firstBossFrame < 0) firstBossFrame = frame;
             }
-            if (guardProbe && shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
-                RValue v = Instance_getSelfVar(guardProbe, shget(vmProbe->varNameMap, "hp_now"));
-                if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) guardHp = (float)RValue_toReal(v);
+            if (guardProbe) {
+                if (shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
+                    RValue v = Instance_getSelfVar(guardProbe, shget(vmProbe->varNameMap, "hp_now"));
+                    if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) guardHp = (float)RValue_toReal(v);
+                }
+                if (guardHp < 0 && shgeti(vmProbe->varNameMap, "hp") >= 0) {
+                    RValue v = Instance_getSelfVar(guardProbe, shget(vmProbe->varNameMap, "hp"));
+                    if (v.type == RVALUE_REAL || v.type == RVALUE_INT32) guardHp = (float)RValue_toReal(v);
+                }
             }
 
             InstanceBBox pb = {0}, bb = {0}, gb = {0};
@@ -138,8 +173,10 @@ HOOK = r'''
                 }
             }
 
+            int playerDrop = lastHp >= 0 && playerHp >= 0 && playerHp < lastHp - 0.5f;
+            int guardDrop = lastGuardHp >= 0 && guardHp >= 0 && guardHp < lastGuardHp - 0.5f;
             int hpChanged = (int)playerHp != lastHp || (int)bossHp != lastBossHp || (int)guardHp != lastGuardHp;
-            int periodic = (frame % 200) == 0;
+            int periodic = (frame % 300) == 0;
             int interesting = overBoss || touchBoss || hpChanged || guardStarHits > 0 || bulletCount > 0 || periodic;
             if (interesting) {
                 logInfo("SANAE_AUDIT frame=%d room=%s hp=%g boss=%s bhp=%g firstboss=%d over=%d touch=%d bullets=%d ov=%s guard=%g guardstar=%d gov=%s\n",
@@ -147,14 +184,31 @@ HOOK = r'''
                     overBoss, touchBoss, bulletCount, overlapNames[0] ? overlapNames : "-",
                     guardHp, guardStarHits, guardOverlapNames[0] ? guardOverlapNames : "-");
             }
+            if (playerDrop || guardDrop) {
+                logInfo("SANAE_DROP frame=%d hp=%g dhp=%g guard=%g dghp=%g over=%d touch=%d bullets=%d ov=%s gov=%s\n",
+                    frame, playerHp, lastHp - playerHp, guardHp, lastGuardHp - guardHp,
+                    overBoss, touchBoss, bulletCount, overlapNames[0] ? overlapNames : "-",
+                    guardOverlapNames[0] ? guardOverlapNames : "-");
+            }
             if ((int)playerHp != lastHp) lastHp = (int)playerHp;
             if ((int)bossHp != lastBossHp) lastBossHp = (int)bossHp;
             if ((int)guardHp != lastGuardHp) lastGuardHp = (int)guardHp;
         }
 
-        /* --- deliberate probe actions (once per scenario, only when in game) --- */
+        /* --- deliberate probe actions (once per scenario, only when in game) ---
+           Environment switches (set per scenario by the Python side):
+             SANAE_PROBE_CHASE      park Sanae on Marisa's body to test contact
+             SANAE_PROBE_GUARDSPAWN create the shield guard next to Sanae
+             SANAE_PROBE_FEED       hand-feed Marisa stars into the guard
+        */
         if (strcmp(scenario, "baseline") && strncmp(scenario, "audit_", 6)) {
-            static int probeSpawnDone = 0, probeRoomEntered = 0;
+            const char *chaseEnv = getenv("SANAE_PROBE_CHASE");
+            const char *guardEnv = getenv("SANAE_PROBE_GUARDSPAWN");
+            const char *feedEnv = getenv("SANAE_PROBE_FEED");
+            int chase = chaseEnv && atoi(chaseEnv) > 0;
+            int guardSpawn = guardEnv && atoi(guardEnv) > 0;
+            int feed = feedEnv && atoi(feedEnv) > 0;
+            static int probeSpawnDone = 0, probeRoomEntered = 0, probeGuardSpawned = 0;
             int inGame = playerProbe != NULL && runnerProbe != NULL;
             const char *roomNow = runnerProbe && runnerProbe->currentRoom && runnerProbe->currentRoom->name
                                       ? runnerProbe->currentRoom->name : NULL;
@@ -162,8 +216,7 @@ HOOK = r'''
             if (!probeSpawnDone && inGame && frame >= 600 && frame <= 2500) {
                 const char *spawn = NULL;
                 float x = playerProbe->x, y = playerProbe->y;
-                if (!strcmp(scenario, "umbrella")) { spawn = "obj_app_es02"; x += 48; }
-                else if (!strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9)) spawn = scenario;
+                if (!strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9)) spawn = scenario;
                 else if (!strncmp(scenario, "room_", 5)) {
                     const char *roomName = scenario + 5;
                     for (unsigned i = 0; i < runnerProbe->dataWin->room.count; ++i)
@@ -180,6 +233,28 @@ HOOK = r'''
                 probeSpawnDone = 1;
             }
 
+            if (guardSpawn && !probeGuardSpawned && inGame && frame >= 700 && frame <= 2500 && playerProbe) {
+                for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
+                    if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, "obj_p01s02e02_gurad")) {
+                        Runner_createInstance(runnerProbe, playerProbe->x + 40.0f, playerProbe->y, (int)i);
+                        break;
+                    }
+                probeGuardSpawned = 1;
+            }
+
+            if (feed && probeGuardSpawned && guardProbe && runnerProbe &&
+                frame >= 1100 && frame <= 2200 && frame % 40 == 0) {
+                const char *spawn = "obj_b02e03_starS_shot";
+                float x = guardProbe->x + 24, y = guardProbe->y - 10;
+                for (int k = 0; k < 3; ++k) {
+                    for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
+                        if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
+                            Runner_createInstance(runnerProbe, x, y - k * 6, (int)i);
+                            break;
+                        }
+                }
+            }
+
             if (!strncmp(scenario, "umbrella_room_", 14) && !probeRoomEntered && inGame &&
                 frame >= 1200 && frame <= 3500) {
                 const char *target = scenario + 14;
@@ -193,15 +268,23 @@ HOOK = r'''
                 }
             }
 
-            if (!strcmp(scenario, "umbrella") && probeSpawnDone && guardProbe && runnerProbe &&
-                frame >= 1100 && frame <= 3600 && frame % 100 == 0) {
-                const char *spawn = "obj_b02e03_starS_shot";
-                float x = guardProbe->x + 32, y = guardProbe->y - 8;
-                for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
-                    if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
-                        Runner_createInstance(runnerProbe, x, y, (int)i);
-                        break;
-                    }
+            if (chase && bossProbe && playerProbe && frame >= 1500 && frame <= 4800) {
+                /* Walk Sanae onto Marisa's body and keep pressing: contact test.
+                   Crude (teleports ~2px/frame, ignores solids) but the audit's
+                   over/touch/ov columns plus SANAE_DROP lines classify any
+                   resulting damage. The guard is dragged along to face the
+                   real boss bullet patterns. */
+                float dx = bossProbe->x - playerProbe->x;
+                float dy = bossProbe->y - playerProbe->y;
+                float adx = dx > 0 ? dx : -dx, ady = dy > 0 ? dy : -dy;
+                if (adx > 3.0f) playerProbe->x += dx > 0 ? 3.0f : -3.0f;
+                else if (ady > 3.0f) playerProbe->y += dy > 0 ? 3.0f : -3.0f;
+                else if (frame % 90 < 45) playerProbe->x += 3.0f;
+                else playerProbe->y += 3.0f;
+                if (guardProbe) {
+                    guardProbe->x = playerProbe->x + 40.0f;
+                    guardProbe->y = playerProbe->y - 16.0f;
+                }
             }
         }
     }
@@ -210,7 +293,8 @@ HOOK = r'''
 
 def summarize(path):
     state = json.loads(path.read_text())
-    result = {'frame': state['frame'], 'room': state['room'],
+    room = state.get('room') or {}
+    result = {'frame': state['frame'], 'room': room.get('name'),
               'game_status': state.get('globalVariables', {}).get('game_status'),
               'ability': state.get('globalVariables', {}).get('set_spell'), 'actors': []}
     for instance in state.get('instances', []):
@@ -218,10 +302,38 @@ def summarize(path):
         if name not in ('obj_P01_KOCHIYASanae', 'obj_p01s02e02_gurad') and 'Marisa' not in name:
             continue
         variables = instance.get('selfVariables', {})
-        result['actors'].append({'object': name, 'x': instance['x'], 'y': instance['y'],
-            **{k: variables[k] for k in ('hp_now', 'hp_max', 'mode_damage', 'mode_invin',
-               'mode_catch', 'next_break', 'set_action') if k in variables}})
+        actor = {'object': name, 'x': round(instance['x']), 'y': round(instance['y'])}
+        for k in ('hp_now', 'hp_max', 'mode_damage', 'mode_invin', 'mode_catch',
+                  'next_break', 'set_action'):
+            if k in variables and variables[k] is not None:
+                actor[k] = round(variables[k]) if isinstance(variables[k], float) else variables[k]
+        result['actors'].append(actor)
     return result
+
+
+def merge_snapshots(snaps, cap=6):
+    """Deduplicate repeated states; keep the widest spread of frames."""
+    groups = {}
+    for s in snaps:
+        sig = (s['room'], s['game_status'], s['ability'],
+               tuple((a['object'], a.get('x'), a.get('y'), a.get('hp_now'),
+                      a.get('mode_damage'), a.get('mode_invin'), a.get('set_action'))
+                     for a in s['actors']))
+        groups.setdefault(sig, []).append(s['frame'])
+    merged = []
+    for sig, frames in groups.items():
+        frames = sorted(frames)
+        keep = [frames[0]]
+        if len(frames) > 1:
+            keep.append(frames[-1])
+        entry = {'room': sig[0], 'game_status': sig[1], 'ability': sig[2],
+                 'actors': [{'object': a[0], 'x': a[1], 'y': a[2],
+                             'hp_now': a[3], 'mode_damage': a[4], 'mode_invin': a[5],
+                             'set_action': a[6]} for a in sig[3]],
+                 'frames': keep}
+        merged.append(entry)
+    merged.sort(key=lambda m: m['frames'][0])
+    return merged[:cap]
 
 
 def tail(lines, count=22, width=240):
@@ -252,43 +364,51 @@ def crash_section(log, max_lines=34, width=170):
 
 
 def parse_audit(log):
-    """Compress SANAE_AUDIT lines into a small report-friendly summary."""
-    events = []
-    for line in log.splitlines():
-        if not line.startswith('SANAE_AUDIT'):
-            continue
+    """Compress SANAE_AUDIT / SANAE_DROP lines into a report-friendly summary."""
+    def fields_of(line, prefix):
         fields = {}
-        for part in line[len('SANAE_AUDIT '):].strip().split(' '):
+        for part in line[len(prefix):].strip().split(' '):
             if '=' in part:
                 key, value = part.split('=', 1)
                 fields[key] = value
-        events.append(fields)
+        return fields
+    events = []
+    drops = []
+    boss_vars = []
+    guard_vars = []
+    for line in log.splitlines():
+        if line.startswith('SANAE_AUDIT'):
+            events.append(fields_of(line, 'SANAE_AUDIT'))
+        elif line.startswith('SANAE_DROP'):
+            drops.append(fields_of(line, 'SANAE_DROP'))
+        elif line.startswith('SANAE_BOSSVAR'):
+            f = fields_of(line, 'SANAE_BOSSVAR')
+            boss_vars.append('%s=%s' % (f.get('name'), f.get('v')))
+        elif line.startswith('SANAE_GUARDVAR'):
+            f = fields_of(line, 'SANAE_GUARDVAR')
+            guard_vars.append('%s=%s' % (f.get('name'), f.get('v')))
     if not events:
-        return {'events': 0}
+        return {'events': 0, 'boss_vars': boss_vars, 'guard_vars': guard_vars}
     over_frames = [e for e in events if e.get('over') == '1']
     contact_frames = [e for e in over_frames if e.get('bullets') == '0']
     touch_only_frames = [e for e in events if e.get('over') == '0' and e.get('touch') == '1' and e.get('bullets') == '0']
-    drops = 0
-    drops_with_boss = 0
-    prev = None
-    for e in events:
-        try:
-            hp = float(e['hp'])
-        except (KeyError, ValueError):
-            continue
-        if prev is not None and hp < prev - 0.5:
-            drops += 1
-            if e.get('over') == '1' and e.get('bullets') == '0':
-                drops_with_boss += 1
-        prev = hp
-    guard_hits = []
+    drops_with_boss = [d for d in drops if d.get('over') == '1']
+    drops_with_boss_no_bullets = [d for d in drops_with_boss if d.get('bullets') == '0']
+    guard_drops = [d for d in drops if d.get('dghp') not in (None, '', '0', '-')]
+    guard_hits = 0
+    guard_first = None
+    guard_hp_min = None
     for e in events:
         if e.get('guardstar') not in (None, '', '0'):
-            try:
-                guard_hits.append((int(e['frame']),
-                                   float(e['guard']) if e.get('guard') not in (None, '', '-') else -1))
-            except (KeyError, ValueError):
-                pass
+            guard_hits += 1
+        try:
+            g = float(e['guard'])
+        except (KeyError, ValueError):
+            continue
+        if g >= 0:
+            if guard_first is None:
+                guard_first = int(e['frame'])
+            guard_hp_min = g if guard_hp_min is None else min(guard_hp_min, g)
     first_boss = None
     for e in events:
         try:
@@ -298,19 +418,27 @@ def parse_audit(log):
         if value >= 0:
             first_boss = value
             break
-    if len(events) <= 40:
+    if len(events) <= 24:
         sample = events
     else:
-        sample = events[:15] + events[len(events) // 2:len(events) // 2 + 10] + events[-15:]
+        sample = events[:10] + events[len(events) // 2:len(events) // 2 + 6] + events[-8:]
+    drop_sample = drops[:24]
     return {
         'events': len(events),
         'overlap_boss_frames': len(over_frames),
         'contact_frames_no_bullets': len(contact_frames),
         'touch_frames_no_bullets': len(touch_only_frames),
-        'hp_drops_total': drops,
-        'hp_drops_with_boss_overlap_no_bullets': drops_with_boss,
-        'guard_star_overlap_events': len(guard_hits),
+        'hp_drops_total': len(drops),
+        'drops_with_boss_overlap': len(drops_with_boss),
+        'drops_with_boss_overlap_no_bullets': len(drops_with_boss_no_bullets),
+        'guard_hp_drops': len(guard_drops),
+        'guard_star_overlap_events': guard_hits,
+        'guard_first_frame': guard_first,
+        'guard_hp_min_seen': guard_hp_min,
         'first_boss_frame': first_boss,
+        'boss_vars': boss_vars,
+        'guard_vars': guard_vars,
+        'drop_details': [{k: d.get(k, '') for k in ('frame', 'hp', 'dhp', 'guard', 'dghp', 'over', 'touch', 'bullets', 'ov', 'gov')} for d in drop_sample],
         'sample': [{k: e.get(k, '') for k in ('frame', 'room', 'hp', 'boss', 'bhp', 'over', 'touch', 'bullets', 'guard', 'guardstar')} for e in sample],
     }
 
@@ -342,10 +470,14 @@ def main():
         backend.write_text(modified)
         subprocess.run(['cmake', '--build', '.cache/sanae-build-headless', '--parallel', '4'], cwd=ROOT, check=True)
         marisa_rooms = ['Room_s02b00_marisa', 'Room_sh02b00_marisa']
-        scenarios = ['baseline', 'audit_600', 'obj_b02_KIRISAMEMarisa',
-                     'room_' + marisa_rooms[0], 'room_' + marisa_rooms[1],
-                     'umbrella', 'umbrella_room_' + marisa_rooms[0]]
-        for index, scenario in enumerate(scenarios):
+        scenarios = [('baseline', {}),
+                     ('obj_b02_KIRISAMEMarisa', {}),
+                     ('room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1'}),
+                     ('room_' + marisa_rooms[1], {'SANAE_PROBE_CHASE': '1'}),
+                     ('umbrella', {'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_FEED': '1'}),
+                     ('umbrella_room_' + marisa_rooms[0],
+                      {'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_CHASE': '1'})]
+        for index, (scenario, probe_env) in enumerate(scenarios):
             case = work / str(index)
             case.mkdir(exist_ok=True)
             inputs = {}
@@ -353,45 +485,37 @@ def main():
                 inputs[str(frame)] = {'keysPressed': [key], 'keysReleased': []}
                 inputs[str(frame + hold)] = {'keysPressed': [], 'keysReleased': [key]}
             end = 900
-            frames = [610, 700, 850]
+            frames = [610, 850]
             if scenario == 'obj_b02_KIRISAMEMarisa':
-                # Dumps before the forced spawn (fires at frame >= 600) so a
-                # pre-action crash is distinguishable from a spawn crash.
+                # Dumps straddle the forced spawn (fires at frame >= 600).
                 start_keys(inputs, edge)
-                frames = [350, 450, 550, 590, 700, 850]
+                end = 1500
+                frames = [400, 550, 640, 900, 1300]
             elif scenario == 'baseline':
                 start_keys(inputs, edge)
-            elif scenario == 'audit_600':
-                # Control: audits whether Sanae, the shield guard, or any Marisa
-                # object exists during menu/title/loading without any deliberate
-                # action. Forced scenarios abort near frame ~3426 (run 8), long
-                # before the first frame dump; start dumps at the abort - 25.
-                start_keys(inputs, edge)
-                end = 2000
-                frames = [150, 300, 450, 610, 700, 1000]
-            elif scenario == 'umbrella':
-                start_keys(inputs, edge)
-                edge(580, 88, 100); edge(720, 40, 30); edge(1000, 88, 900)
-                end = 2000
-                frames = [1050, 1150, 1250, 1350, 1450, 1550, 1601, 1650, 1850]
             elif scenario.startswith('room_'):
+                # Enter the boss room via pendingRoom at >=600, then dodge taps
+                # keep Sanae alive until the hook chase parks her on Marisa.
                 start_keys(inputs, edge)
-                end = 8000
-                frames = [850, 1400, 2400, 4800, 7800]
-                for frame in range(660, 7900, 45):
-                    edge(frame, 90)
-                # Sustained walking into the boss: alternate right/left so Sanae
-                # repeatedly attempts contact with Marisa's body, without
-                # teleporting her onto the boss.
-                for frame in range(1600, 7600, 500):
-                    edge(frame, 39 if (frame // 500) % 2 == 0 else 37, 460)
+                end = 4800
+                frames = [1100, 1500, 2000, 3200, 4600]
+                for frame in range(900, 4800, 240):
+                    edge(frame, 39 if (frame // 240) % 2 == 0 else 37, 200)
+            elif scenario == 'umbrella':
+                # Directly spawn the shield guard next to Sanae (env flag) and
+                # hand-feed Marisa stars into it (env flag); no ability capture
+                # required, so plain menu taps are enough.
+                start_keys(inputs, edge)
+                end = 2400
+                frames = [750, 900, 1150, 1400, 1700, 2300]
             elif scenario.startswith('umbrella_room_'):
-                # Tutorial capture of Kogasa's ability + raised shield, then
-                # carry the held action into the real Marisa room at frame 1200.
+                # Spawn the guard in the tutorial, enter the real Marisa room,
+                # and chase so guard+Sanae face the boss bullet pattern.
                 start_keys(inputs, edge)
-                edge(580, 88, 100); edge(720, 40, 30); edge(1000, 88, 7000)
-                end = 8000
-                frames = [850, 1400, 2400, 4800, 7800]
+                end = 4800
+                frames = [900, 1400, 2000, 3200, 4600]
+                for frame in range(900, 4800, 240):
+                    edge(frame, 39 if (frame // 240) % 2 == 0 else 37, 200)
             (case / 'inputs.json').write_text(json.dumps(inputs))
             args = [str(ROOT / '.cache/sanae-build-headless/butterscotch'), str(data),
                     '--headless', '--exit-at-frame', str(end), '--playback-inputs', str(case / 'inputs.json'),
@@ -399,7 +523,7 @@ def main():
                     '--disable-log-colours']
             for frame in frames:
                 args += ['--dump-frame-json', str(frame)]
-            env = dict(os.environ, SANAE_PRIVATE_SCENARIO=scenario)
+            env = dict(os.environ, SANAE_PRIVATE_SCENARIO=scenario, **probe_env)
             log = ''
             code = 0
             try:
@@ -415,7 +539,7 @@ def main():
                       'missing_csv_count': log.count('missing/invalid CSV'),
                       'unknown_function_count': log.count('Unknown function'),
                       'audit': parse_audit(log),
-                      'snapshots': [summarize(p) for p in sorted(case.glob('state-*.json'))]}
+                      'snapshots': merge_snapshots([summarize(p) for p in sorted(case.glob('state-*.json'))])}
             if code not in (0,):
                 # Reproduce under gdb so the abort/segv site is visible in the report.
                 gdb_log = ''
