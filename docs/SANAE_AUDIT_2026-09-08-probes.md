@@ -104,3 +104,48 @@ screenshot comparison on the Switch NRO or the GLES host backend.
    separate base-engine behavior from overlay regressions.
 4. Rendering: capture GLES frames of the shield durability bar on Switch NRO
    and compare against the PC reference screenshot (purple vs black).
+
+## Run 18 (probe 2e342d1) — original capture recipe + real-motion contact
+
+Restored the pre-rewrite harness recipe (commit 581d8d5) which had reproduced
+umbrella durability loss, and changed contact testing from x/y teleports to
+real engine motion (hook drives hspeed/vspeed toward the boss).
+
+**Umbrella durability — WORKS with a legitimate capture (tutorial).**
+Spawn the pickup obj_app_es02, X (inhale), Down (swallow) -> ability
+`02_TATARAKogasa`, X to raise; guard appears (hp_now=40/40, next_break=0).
+Fed obj_b02e03_starS_shot stars drain durability exactly like the 2026-09-08
+audit: 40 -> 32 -> 24 -> 16 -> 8 -> 0 at frames 1101..1501 (5 drops, -8 each),
+then the guard resets to 40 after the break. So the open engine CAN run the
+PC shield mechanic when the ability is obtained through the game's own flow.
+
+**Umbrella in the real Marisa room — shield blocks everything, durability 40->40.**
+Legit umbrella raised (ability 02_TATARAKogasa, keepwait), entry into
+Room_s02b00_marisa at 2000: the player takes ZERO damage through the whole
+fight (bullets blocked) and bullet-like objects overlap the shield on 1659
+frames, but durability never decreases. Fed stars drain it; real room attacks
+do not. Either those attacks are not shield-draining by design, or the drain
+path is gated by a state the probe never reached (the fight ended quickly in
+the orrery phase; Marisa's pellet phases may not have occurred).
+
+**Marisa body contact — WORKS in the tutorial spawn with real motion, NOT in
+the real room.**
+- obj_b02_KIRISAMEMarisa spawned on Sanae: contact damage 100->84 at frame 601
+  (overlap), then again 60->44 at frame 1766 while the boss body overlapped
+  with no bullet present. Real engine motion reaches the same boss body and
+  contact damage fires.
+- Room_s02b00_marisa real fight: 891 body-overlap frames, 671 with no bullet
+  present, zero HP drops on the body; all 6 damage events were the boss's
+  orrery (obj_b02e01_orrey) while the boss body was NOT overlapping. In the
+  real room the continuous Z-fire (every 45 frames) keeps the boss in damage
+  hitstun for most of the fight; the tutorial contact hit at 1766 happened
+  after firing had stopped. This is consistent with the game's own scripts
+  gating body contact on the boss's damage/recovery state rather than with an
+  engine dispatch failure (the dispatch demonstrably fires both directions).
+
+**Conclusion of run 18:** the engine reproduces both mechanics in the narrow
+host contexts; the user-reported failures are tied to the real story-room
+context, which the probes cannot yet pin to an engine defect. The remaining
+candidate root causes live inside the game's own scripts (boss-state gating of
+contact damage; shield-drain gating per bullet type) and would need either the
+exact play session/save or function-level tracing of the handlers to isolate.
