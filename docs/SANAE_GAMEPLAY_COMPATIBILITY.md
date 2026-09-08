@@ -249,3 +249,18 @@ control without the ordering repair failed the contact-order assertion.
 The local Python suite remains 52 tests (41 passed, 11 skipped); native combat,
 window/save/restart/draw tests and sanitized audio tests pass. These are host
 checks, not confirmation on physical Switch hardware or a full playthrough.
+
+### Published combat build
+
+Source `d650385e2785d701e980f4f3727ea71fdc562f0f`.
+Both Linux/native checks and Switch compilation passed:
+https://github.com/1warriorscats1-sys/-/actions/runs/34244356105
+
+Artifact `SANAE-experimental-switch`, ID `10063396009`, 18,721,350 bytes,
+non-expired at publication:
+https://github.com/1warriorscats1-sys/-/actions/runs/34244356105/artifacts/10063396009
+
+The Switch CI includes the mandatory NACP/embedded-cover verification. The
+sandbox could not independently download the completed artifact (blob download
+returned EOF); its publication and size were confirmed through the GitHub API.
+This is the combat build, not the earlier controls-only artifact.

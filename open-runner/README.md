@@ -7,11 +7,30 @@ After the ordering repair, the portrait, red HP bar and floor are visible in the
 host GLES test. The player stands on the floor. No replacement game graphics are used.
 
 These are host results, not confirmation on Switch or proof of full-game compatibility.
-See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The latest compilation includes the HUD repair and passed both CI jobs. Author/version remain sorehodoh/01.01.
+Contact damage, suction and ability acquisition are also repaired and tested with original scripts on host.
+See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The latest combat build passed both CI jobs. Author/version remain sorehodoh/01.01.
 
 # SANAE — experimental open NRO integration
 
-## Latest controls adjustment — SANAE 01.01
+## Latest combat repair — SANAE 01.01
+
+**[Download updated NRO](https://github.com/1warriorscats1-sys/-/actions/runs/34244356105/artifacts/10063396009)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34244356105)
+
+Repairs collision notification ordering and missing reverse notifications after
+movement/destruction. With unchanged original game scripts, host checks confirm
+contact damage **100 → 92 → 84**, capture through eleven enemy spawners, and
+acquisition of Cirno/Kogasa/Hina/Chen abilities. HP values and game balance are
+not patched. This is not a full-playthrough or physical Switch verification.
+
+All earlier floor/HUD/restart/save/exit repairs, A/B exchange, unchanged X/Y,
+and fully disabled right stick are retained. Author/version: **sorehodoh / 01.01**;
+the requested cover is retained and the CI embedded-icon/NACP check passed.
+
+Binary source `d650385e2785d701e980f4f3727ea71fdc562f0f`;
+artifact `10063396009`, **18,721,350 bytes**, non-expired at publication.
+Replace only `sd:/switch/sanae/sanae.nro`; preserve game assets and saves.
+
+## Previous controls adjustment — SANAE 01.01
 
 **[Download updated NRO](https://github.com/1warriorscats1-sys/-/actions/runs/34241537490/artifacts/10062243168)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34241537490)
 
