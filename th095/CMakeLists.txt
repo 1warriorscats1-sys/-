@@ -101,8 +101,16 @@ else()
     find_package(OpenGL REQUIRED)
     # pkg-config: distro SDL2(-ttf/-image) packages do not ship CMake config
     # files, but they all ship .pc files.
+    # Note: module-name lookup is case-sensitive in the pkgconf shipped on
+    # the ubuntu-latest (noble) runner — "SDL2_ttf"/"SDL2_image" resolve
+    # against their exact-case .pc files while "SDL2" does NOT resolve
+    # against the shipped "sdl2.pc". Try the canonical case first, then the
+    # exact lowercase filename case (other distros keep working either way).
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SDL2_REQ REQUIRED SDL2 SDL2_ttf SDL2_image)
+    pkg_check_modules(SDL2_REQ QUIET SDL2 SDL2_ttf SDL2_image)
+    if(NOT SDL2_REQ_FOUND)
+        pkg_check_modules(SDL2_REQ REQUIRED sdl2 SDL2_ttf SDL2_image)
+    endif()
     find_library(FONTCONFIG_LIBRARY fontconfig)
     find_library(PTHREAD_LIBRARY pthread)
 
