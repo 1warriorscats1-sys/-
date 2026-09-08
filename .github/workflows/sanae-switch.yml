@@ -1,4 +1,4 @@
-# Window controls disabled on Switch; regression test and NACP 01.01.
+# Array collisions, controller rediscovery on restart and requested cover; NACP 01.01.
 name: SANAE experimental open NRO
 
 on:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install original-icon test dependency
+      - name: Install cover-conversion test dependency
         run: sudo apt-get update && sudo apt-get install -y python3-pil
 
       - name: Публичные тесты и проверки сохранений

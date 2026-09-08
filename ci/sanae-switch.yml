@@ -1,41 +1,56 @@
-# Install as .github/workflows/sanae-switch.yml when workflow writes are allowed.
-# Activation push only (this session branch), then manual where GitHub permits.
-# No build on ordinary source pushes; the workflow file itself must change.
+# Array collisions, controller rediscovery on restart and requested cover; NACP 01.01.
 name: SANAE experimental open NRO
+
 on:
   workflow_dispatch:
   push:
-    branches: ['arena/01a080a0-repo']
-    paths: ['.github/workflows/sanae-switch.yml']
+    branches:
+      - arena/01a080a0-repo
+    paths:
+      - .github/workflows/sanae-switch.yml
+
 permissions:
   contents: read
+
 jobs:
   host-tests:
+    name: Проверки SANAE на Linux
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install original-icon test dependency
+
+      - name: Install cover-conversion test dependency
         run: sudo apt-get update && sudo apt-get install -y python3-pil
 
-      - name: Public tests, including native failure injection
+      - name: Публичные тесты и проверки сохранений
         run: SANAE_SANITIZE=1 python3 -m unittest discover -s tests -v
-      - name: Build and test SANAE integration without private game files
+
+      - name: Сборка и тестирование интеграции SANAE
         run: python3 scripts/build_sanae.py --target headless
       - name: Sanitized audio crash regression
         run: python3 scripts/test_sanae_runner.py --sanitize-audio
 
+
   switch:
+    name: Сборка SANAE NRO
     needs: host-tests
     runs-on: ubuntu-24.04
     container:
       image: devkitpro/devkita64:latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Install build orchestration tools
-        run: apt-get update && apt-get install -y --no-install-recommends python3 python3-pil git cmake make
-      - name: Build SANAE NRO and exact corresponding source
+
+      - name: Установка инструментов сборки
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pil git cmake make
+
+      - name: Сборка SANAE NRO и архива исходников
         run: python3 scripts/build_sanae.py --target switch
-      - uses: actions/upload-artifact@v4
+
+      - name: Загрузка результата
+        uses: actions/upload-artifact@v4
         with:
           name: SANAE-experimental-switch
           if-no-files-found: error

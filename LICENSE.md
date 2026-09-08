@@ -1,5 +1,8 @@
 # License scope
 
+The third-party cover embedded by the Switch builder is **not** covered by this
+license. See `open-runner/ARTWORK_NOTICE.txt` for its source and rights caveat.
+
 The MIT license below applies **only** to these original additions:
 
 - scripts/create_sanae_icon.py, scripts/verify_sanae_nro.py, tests/test_sanae_icon.py

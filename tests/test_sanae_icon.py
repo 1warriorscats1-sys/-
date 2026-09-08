@@ -1,4 +1,4 @@
-"""Generated, non-game icon and actual NRO asset-table validation."""
+"""Cover conversion and actual NRO asset-table validation (synthetic art only)."""
 import importlib.util
 from pathlib import Path
 import struct
@@ -16,7 +16,10 @@ from verify_sanae_nro import verify
 class SanaeIconTests(unittest.TestCase):
     def fixture(self, directory):
         icon = Path(directory)/'icon.jpg'
-        create_icon(icon)
+        from PIL import Image
+        source = Path(directory)/"synthetic-cover.png"
+        Image.new("RGB", (320, 180), (60, 180, 90)).save(source)
+        create_icon(icon, source)
         jpeg = icon.read_bytes()
         nacp = bytearray(0x4000)
         title = b'SANAE - Sylphid Breeze'; author = b'sorehodoh'
@@ -30,7 +33,7 @@ class SanaeIconTests(unittest.TestCase):
         nro.write_bytes(header+assets+jpeg+nacp)
         return nro
 
-    def test_generated_icon_and_metadata(self):
+    def test_cover_icon_and_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             report = verify(self.fixture(directory))
             self.assertEqual(report['version'], '01.01')
@@ -56,3 +59,23 @@ class SanaeIconTests(unittest.TestCase):
             data[-0x4000+0x3060:-0x4000+0x3065] = b'0.1.0'
             nro.write_bytes(data)
             with self.assertRaises(RuntimeError): verify(nro)
+
+    def test_preserve_non_square_cover_and_baseline_format(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)/'wide.png'; output = Path(directory)/'icon.jpg'
+            Image.new('RGB', (400, 200), (255, 0, 0)).save(source)
+            create_icon(output, source)
+            with Image.open(output) as icon:
+                self.assertEqual(icon.size, (256, 256))
+                self.assertEqual(icon.mode, 'RGB')
+                self.assertFalse(icon.info.get('progressive', False))
+                self.assertGreater(icon.getpixel((128, 128))[0], 240)
+                self.assertLess(icon.getpixel((128, 10))[0], 40)
+
+    def test_missing_cover_never_falls_back_to_emblem(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)/'icon.jpg'
+            with self.assertRaises(FileNotFoundError):
+                create_icon(output, Path(directory)/'missing.png')
+            self.assertFalse(output.exists())

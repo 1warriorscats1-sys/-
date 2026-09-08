@@ -11,6 +11,8 @@
 #include "overlay_file_system.h"
 #include "stb_ds.h"
 #include "log.h"
+#include "gml_array.h"
+#include "spatial_grid.h"
 void platformLog(const logType type, const char *format, va_list args) {
     (void)type; vfprintf(stderr, format, args);
 }
@@ -29,7 +31,45 @@ static void has(FileSystem *fs, const char *path, const char *text) {
     if (!actual || !strstr(actual, text)) fprintf(stderr, "File %s expected [%s], got [%s]\n", path, text, actual ? actual : "NULL");
     assert(actual && strstr(actual, text)); free(actual);
 }
+static void collision_arrays(void) {
+    DataWin dw = {0}; Runner runner = {0}; VMContext vm = {0};
+    GameObject objects[4] = {0};
+    Sprite sprite = {.width=10, .height=10, .bboxMode=1, .sepMasks=2};
+    Instance caller = {.instanceId=100001, .objectIndex=0, .active=true,
+        .spriteIndex=0, .maskIndex=-1, .imageXscale=1, .imageYscale=1};
+    Instance wall = {.instanceId=100002, .objectIndex=1, .active=true,
+        .spriteIndex=0, .maskIndex=-1, .imageXscale=1, .imageYscale=1, .x=8};
+    for (int i=0; i<4; ++i) objects[i].parentId=-1;
+    objects[1].parentId=2;
+    dw.objt.count=4; dw.objt.objects=objects; dw.sprt.count=1; dw.sprt.sprites=&sprite;
+    runner.dataWin=&dw; runner.vmContext=&vm; runner.spatialGrid=SpatialGrid_create(4,4);
+    vm.runner=&runner; vm.dataWin=&dw; vm.currentInstance=&caller;
+    arrput(runner.spatialGrid->grid[0], &wall);
+    VMBuiltins_registerAll(&vm);
+    RValue args[] = {RValue_makeReal(8), RValue_makeReal(0), RValue_makeReal(1)};
+    assert(RValue_toInt32(invoke(&vm,"instance_place",args,3))==100002);
+    GMLArray *targets=GMLArray_create(17,2);
+    *GMLArray_slot(targets,0)=RValue_makeReal(3); /* first target misses */
+    *GMLArray_slot(targets,1)=RValue_makeAssetRef(2,0); /* parent object hits */
+    args[2]=RValue_makeArray(targets);
+    assert(RValue_toInt32(invoke(&vm,"instance_place",args,3))==100002);
+    assert(caller.x==0 && caller.y==0); /* probe cannot move the player */
+    assert(GMLArray_length1D(targets)==2 && RValue_toInt32(*GMLArray_slot(targets,1))==2);
+    wall.active=false;
+    assert(RValue_toInt32(invoke(&vm,"instance_place",args,3))==INSTANCE_NOONE);
+    wall.active=true; args[0]=RValue_makeReal(100);
+    assert(RValue_toInt32(invoke(&vm,"instance_place",args,3))==INSTANCE_NOONE);
+    args[0]=RValue_makeReal(8);
+    *GMLArray_slot(targets,1)=RValue_makeReal(100002); /* instance IDs too */
+    assert(RValue_toInt32(invoke(&vm,"instance_place",args,3))==100002);
+    discard(args[2]); args[2]=RValue_makeArray(GMLArray_create(17,0));
+    assert(RValue_toInt32(invoke(&vm,"instance_place",args,3))==INSTANCE_NOONE);
+    assert(RValue_toInt32(invoke(&vm,"instance_place",NULL,0))==INSTANCE_NOONE);
+    discard(args[2]); SpatialGrid_free(runner.spatialGrid); shfree(vm.builtinMap);
+    puts("instance_place: scalar, arrays, descendants, IDs, inactive, miss, empty and position preservation passed.");
+}
 int main(void) {
+    collision_arrays();
     DataWin dw = {0}; Runner runner = {0}; VMContext vm = {0};
     RValue ini = string("progress.ini"), second = string("next.ini");
     RValue fields[] = {string("progress"), string("stage"), RValue_makeReal(3)};

@@ -1,3 +1,10 @@
+> **Compatibility warning (2026-09-08):** the published experimental NRO still has
+> reported gameplay/HUD problems. It is not equivalent to the previously working
+> proprietary NSP. New collision/restart source repairs are host-tested; black
+> HP/ability rendering remains unresolved. See
+> [the investigation](docs/SANAE_GAMEPLAY_COMPATIBILITY.md). Do not replace a working
+> installation on the assumption that compilation proves full compatibility.
+
 # SANAE's Sylphid Breeze — Switch Port Tools
 
 ![Platform](https://img.shields.io/badge/Platform-Nintendo_Switch-e60012?style=for-the-badge)

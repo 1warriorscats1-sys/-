@@ -112,6 +112,23 @@ void Sanae_registerFixedWindow(VMContext *ctx) {
     sanae_register(ctx, "window_center", sanae_noop);
     sanae_register(ctx, "window_get_fullscreen", sanae_fullscreen);
 }
+/* GMS 2024 instance_place accepts an array of collision targets. Do not coerce
+ * the array to object zero: that silently removes floors and all other checks. */
+static RValue sanae_instance_place(VMContext *ctx, RValue *args, int32_t count) {
+    if (count < 3) return RValue_makeReal(INSTANCE_NOONE);
+    if (args[2].type != RVALUE_ARRAY) return builtin_instance_place(ctx, args, count);
+    GMLArray *targets = args[2].array;
+    int32_t length = GMLArray_length1D(targets);
+    RValue scalar[3] = {args[0], args[1], RValue_makeUndefined()};
+    for (int32_t i = 0; i < length; ++i) {
+        RValue *target = GMLArray_slot(targets, i);
+        if (!target || target->type == RVALUE_ARRAY) continue;
+        scalar[2] = *target;
+        RValue result = builtin_instance_place(ctx, scalar, 3);
+        if (RValue_toInt32(result) != INSTANCE_NOONE) return result;
+    }
+    return RValue_makeReal(INSTANCE_NOONE);
+}
 static void sanae_register_builtins(VMContext *ctx) {
     sanae_register(ctx, "audio_group_set_gain", sanae_group_gain);
     sanae_register(ctx, "audio_group_get_gain", sanae_group_get_gain);
@@ -119,6 +136,7 @@ static void sanae_register_builtins(VMContext *ctx) {
     sanae_register(ctx, "audio_sound_loop", sanae_sound_loop);
     sanae_register(ctx, "audio_sound_get_loop", sanae_sound_get_loop);
     sanae_register(ctx, "load_csv", sanae_load_csv);
+    sanae_register(ctx, "instance_place", sanae_instance_place);
     sanae_register(ctx, "instance_furthest", sanae_instance_furthest);
     sanae_register(ctx, "steam_initialised", sanae_false);
     sanae_register(ctx, "steam_get_achievement", sanae_false);

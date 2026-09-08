@@ -63,6 +63,19 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
 
     replace('src/runner.h', '#define OTHER_GAME_START     2', '#define OTHER_GAME_START     2\n#define OTHER_GAME_END       3')
     replace('src/runner.h', '    bool shouldExit;', '    bool shouldExit;\n    bool sanaeSaveFailed;')
+    # game_restart destroys the game's controller DS lists, not the physical pads.
+    # Re-emit discovery once after the new room's Create events. connectedPrev is
+    # overwritten by beginFrame, so resetting that field alone cannot work.
+    replace('src/runner.h', '    RunnerGamepadState* gamepads;',
+            '    RunnerGamepadState* gamepads;\n    bool sanaeRediscoverGamepads;')
+    replace('src/runner.c', '    runner->gameStartFired = false;',
+            '    runner->gameStartFired = false;\n    runner->sanaeRediscoverGamepads = true;')
+    replace('src/runner.c', '    for (int i = 0; MAX_GAMEPADS > i; i++) {',
+            '    bool rediscover = runner->sanaeRediscoverGamepads;\n'
+            '    runner->sanaeRediscoverGamepads = false;\n'
+            '    for (int i = 0; MAX_GAMEPADS > i; i++) {')
+    replace('src/runner.c', '        if (slot->connected != slot->connectedPrev) {',
+            '        if ((rediscover && slot->connected) || slot->connected != slot->connectedPrev) {')
     replace('src/runner.h', 'void Runner_free(Runner* runner);',
             'bool Runner_sanaeFlushSaves(Runner* runner);\nvoid Runner_free(Runner* runner);')
     replace('src/runner.c', 'if (isEventBlockedByPendingRoom(runner, instance, eventType) || runner->shouldExit)',

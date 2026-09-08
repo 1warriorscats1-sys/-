@@ -1,3 +1,16 @@
+## Current compatibility warning
+
+Hardware feedback after the last published build reports missing floor collision,
+black HP/ability HUD and dead controller input after pause → title. The independent
+engine is **not equivalent to the proprietary runner used by the previous NSP**.
+Do not describe it as fully playable or as just the old NSP fixes repackaged.
+
+Pending source repairs include array-target `instance_place` and controller discovery
+after `game_restart`. Host probes reproduce both failures and pass with the repairs.
+The black HUD has **not** been diagnosed or fixed. The cover converter now uses the
+owner-requested URL instead of the procedural emblem; Switch embedding must pass CI.
+See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md` and `ARTWORK_NOTICE.txt`.
+
 # SANAE — experimental open NRO integration
 
 **Status (2026-09-08): repaired SANAE 01.01 compiled successfully in GitHub Actions.**
@@ -7,7 +20,7 @@
 - [Successful host and Switch jobs](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024)
 - Binary source: `72cf353e129f4ed9147a77792a1e73d71b957f3f`.
 - New-game audio-group indexing repaired; incomplete exit frames suppressed.
-- Original wind icon embedded and verified by parsing the actual NRO. Author `sorehodoh`,
+- Cover icon conversion and actual-NRO asset validation. Author `sorehodoh`,
   version `01.01`; Switch window controls remain disabled.
 - Artifact API confirms ID `10056171118`, 18,625,745 bytes, not expired at publication.
   Includes Switch zip, exact source, BUILD.json and separate crash-symbol zip.
@@ -41,7 +54,7 @@ module ID**. Cause: append-order audio group storage was incorrectly indexed by 
 IDs. Indexed group storage, validation and an out-of-order playback regression are now
 implemented. Exit presentation also stops before a partial frame after `game_end`.
 
-An original generated icon is now embedded; the builder verifies the actual NRO icon,
+The builder now converts the requested cover and verifies the actual NRO icon,
 NACP author `sorehodoh` and version `01.01`. The prior window-control lock remains.
 Switch diagnostics now reach `sanae.log`; each new binary ships its exact ELF separately.
 See [diagnostic evidence, repairs and test limits](../docs/SANAE_CRASH_DIAGNOSIS.md).

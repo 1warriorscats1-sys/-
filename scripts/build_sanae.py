@@ -91,7 +91,8 @@ def main():
                 'engine': PIN, 'target': args.target, 'cmake_options': options,
                 'display_version': '01.01', 'game_author': 'sorehodoh', 'verified_nro_assets': asset_report,
                 'sha256': hashlib.sha256(named.read_bytes()).hexdigest(),
-                'save_directory': 'sdmc:/switch/sanae/saves', 'game_data_included': False}
+                'save_directory': 'sdmc:/switch/sanae/saves', 'game_data_included': False,
+                'artwork_notice': 'ARTWORK_NOTICE.txt' if args.target == 'switch' else None}
     (output/'BUILD.json').write_text(json.dumps(manifest, indent=2)+'\n')
     # Ship the EXACT patched engine source and the integration/build instructions.
     with tarfile.open(output/'sanae-source.tar.gz', 'w:gz') as archive:
@@ -125,6 +126,7 @@ def main():
                 if (stage/name).is_file():
                     archive.write(stage/name, 'LICENSE-engine-'+name)
             archive.write(ROOT/'LICENSE.md', 'LICENSE-integration.md')
+            archive.write(ROOT/'open-runner/ARTWORK_NOTICE.txt', 'ARTWORK_NOTICE.txt')
         print('Publish sanae-source.tar.gz alongside the Switch zip; retain dependency notices.')
     print(f'Built experimental SANAE: {named}\nCorresponding source: {output / "sanae-source.tar.gz"}')
 

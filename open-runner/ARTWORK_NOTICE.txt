@@ -1,0 +1,15 @@
+SANAE cover artwork
+
+The NRO icon is a resized/padded copy of the cover specifically requested by the
+repository owner, fetched at build time from:
+https://lambda.vgmtreasurechest.com/soundtracks/sanaes-sylphid-breeze-unofficial-soundtrack-windows-gamerip-2025/cover.png
+
+This is third-party game artwork. The MIT license for the converter and the
+AGPL license for the engine do not license this image. All artwork rights remain
+with their respective owners. Public availability of the source image is not
+proof of permission to redistribute it. Distributors must check applicable
+artwork permissions separately; this project makes no blanket legality claim.
+
+No game data.win, game audio or proprietary GameMaker runtime is bundled.
+For a build with your own authorized artwork, set SANAE_ICON_SOURCE to its local
+file before running scripts/build_sanae.py --target switch.
