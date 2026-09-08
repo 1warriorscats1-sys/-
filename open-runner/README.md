@@ -12,7 +12,25 @@ See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The latest combat build passed both 
 
 # SANAE — experimental open NRO integration
 
-## Latest combat repair — SANAE 01.01
+## Latest audited build — SANAE 01.01
+
+**[Download updated NRO](https://github.com/1warriorscats1-sys/-/actions/runs/34246955442/artifacts/10064457261)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34246955442)
+
+The [broader audit](../docs/SANAE_AUDIT_2026-09-08.md) found and repaired empty-container/BC17-local undefined behavior, signed hash shifts and buffer-pool cleanup leaks. Full-engine ASan/UBSan/leak tests now gate the Switch build and passed CI.
+
+Private host checks include 104 forced room entries, 96,000 mixed-input frames,
+death/respawn, pause/title/exit, and eight GLES room smoke tests. These do **not**
+prove normal level progression, full-game graphics/audio or physical Switch parity.
+External scenario CSV and audio groups are still unavailable locally.
+
+All prior combat, floor/HUD, save/exit and controls fixes are retained; no game
+data or balance values are changed. Metadata remains sorehodoh / 01.01.
+
+Binary source `70f0eef8edfc96956e50998c4033ca624ba38677`;
+artifact `10064457261`, **18,722,289 bytes**, non-expired at publication.
+Replace only `sd:/switch/sanae/sanae.nro`; preserve assets and saves.
+
+## Previous combat repair — SANAE 01.01
 
 **[Download updated NRO](https://github.com/1warriorscats1-sys/-/actions/runs/34244356105/artifacts/10063396009)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34244356105)
 

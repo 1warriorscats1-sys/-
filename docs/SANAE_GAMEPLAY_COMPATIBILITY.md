@@ -264,3 +264,16 @@ The Switch CI includes the mandatory NACP/embedded-cover verification. The
 sandbox could not independently download the completed artifact (blob download
 returned EOF); its publication and size were confirmed through the GitHub API.
 This is the combat build, not the earlier controls-only artifact.
+
+## Subsequent broad audit
+
+See [the full audit](SANAE_AUDIT_2026-09-08.md) for additional sanitizer-confirmed
+VM/hash undefined behavior and buffer cleanup fixes, 104 room-entry probes,
+96,000 input-stress frames, death/restart/exit and GLES smoke tests. Full-engine
+sanitizers now gate the build. The audit explicitly does not establish full-game
+or physical Switch parity.
+
+Latest audited binary source: `70f0eef8edfc96956e50998c4033ca624ba38677`.
+Successful CI: https://github.com/1warriorscats1-sys/-/actions/runs/34246955442
+Artifact: https://github.com/1warriorscats1-sys/-/actions/runs/34246955442/artifacts/10064457261
+(18,722,289 bytes, non-expired at publication).
