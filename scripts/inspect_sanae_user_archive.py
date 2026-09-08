@@ -20,7 +20,7 @@ def main():
     try:
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{9,127}', os.environ.get('SANAE_USER_ARCHIVE_ID', '')):
             raise ValueError('Expected a Google Drive file ID')
-        subprocess.run(['gdown', '--id', os.environ['SANAE_USER_ARCHIVE_ID'],
+        subprocess.run(['gdown', '--fuzzy', 'https://drive.google.com/file/d/' + os.environ['SANAE_USER_ARCHIVE_ID'] + '/view',
                         '-O', str(archive)], check=True, timeout=300, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         with py7zr.SevenZipFile(archive, 'r') as reader:
             selected = []
@@ -50,6 +50,11 @@ def main():
                       audio_groups=sorted(p.name for p in assets if p.name.lower().startswith('audiogroup') and p.suffix.lower()=='.dat'))
     except Exception as error:
         report.update(status='download/extraction failed', error=type(error).__name__)
+        if isinstance(error, subprocess.CalledProcessError):
+            detail = (error.stderr or b'').decode(errors='replace')[-2500:]
+            detail = re.sub(r'https?://\S+', '<url>', detail)
+            detail = detail.replace(os.environ.get('SANAE_USER_ARCHIVE_ID', 'unset'), '<file-id>')
+            report['download_diagnostic'] = detail
         raise
     finally:
         REPORT.write_text(json.dumps(report, indent=2))
