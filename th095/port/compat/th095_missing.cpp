@@ -8,7 +8,7 @@
 // Bodies marked TODO(port) are minimal safe placeholders; correct
 // behaviour requires disassembly-level fidelity work against the
 // original th095.exe 1.02a (see ATTRIBUTION.md).
-<string.h>
+#include <string.h>
 #include "inttypes.hpp"
 #include "ZunMath.hpp"
 #include "ZunResult.hpp"
