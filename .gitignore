@@ -1,0 +1,20 @@
+# Build output (NRO, host binaries, frames, archives)
+dist/
+build/
+*.o
+*.elf
+*.map
+*.nacp
+*.nro
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Local only: never commit game data or generated packages
+th01open.dat
+*.sav
+*.sav.bak
+*.sav.tmp
+*.ppm
+*.wav

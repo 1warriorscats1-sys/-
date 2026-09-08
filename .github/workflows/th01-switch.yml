@@ -1,0 +1,86 @@
+# TH01 (highly responsive orbs) experimental open NRO.
+# Builds only original engine code; no game data is fetched or bundled.
+name: TH01 experimental open NRO
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/01a082ad-repo
+    paths:
+      - .github/workflows/th01-switch.yml
+      - highly-responsive-prayers/**
+      - docs/TH01_*.md
+      - scripts/build_th01.py
+      - scripts/create_th01_icon.py
+      - scripts/verify_th01_nro.py
+      - scripts/pack_th01_data.py
+      - scripts/test_th01_native.py
+      - scripts/gen_th01_font.py
+      - scripts/render_th01_preview.py
+      - scripts/probe_th01_original.py
+      - tests/test_th01.py
+      - tests/native/th01_*.c
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Проверки TH01 на Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка зависимости для проверки иконки и NRO
+        run: sudo apt-get update && sudo apt-get install -y python3-pil
+
+      - name: Публичные тесты (только стандартная библиотека)
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Нативные тесты с санитайзерами
+        run: python3 scripts/test_th01_native.py --sanitize
+
+      - name: Симуляция: boot, card, boss, death, determinism
+        run: python3 scripts/build_th01.py --target headless --frames 1800
+
+      - name: Host-сборка: кадры, WAV и превью
+        run: python3 scripts/build_th01.py --target host --frames 900 --every 10
+
+      - name: Артефакты хоста
+        uses: actions/upload-artifact@v4
+        with:
+          name: TH01-host-preview
+          if-no-files-found: warn
+          path: |
+            dist/th01/host/th01-preview.gif
+            dist/th01/host/BUILD.json
+
+  switch:
+    name: Сборка TH01 NRO
+    needs: host-tests
+    runs-on: ubuntu-24.04
+    container:
+      image: devkitpro/devkita64:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка инструментов сборки
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pil git make zip
+
+      - name: Сборка NRO и архива исходников
+        run: python3 scripts/build_th01.py --target switch
+
+      - name: Загрузка результата
+        uses: actions/upload-artifact@v4
+        with:
+          name: TH01-experimental-switch
+          if-no-files-found: error
+          path: |
+            dist/th01/switch/TH01-experimental-switch.zip
+            dist/th01/switch/th01-source.tar.gz
+            dist/th01/switch/th01-symbols.zip
+            dist/th01/switch/BUILD.json
