@@ -137,6 +137,9 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertIn("appletMainLoop", source)
         self.assertNotIn("http://", source)
         self.assertNotIn("https://", source)
+        # 3DS-era key names do not exist in libnx; the port must use HidNpadButton_*
+        self.assertNotIn("KEY_A", source)
+        self.assertNotIn("KEY_DLEFT", source)
 
     def test_no_game_data_is_committed(self):
         banned_suffixes = {".dat", ".bin", ".grp", ".png", ".jpg", ".wav", ".nro",
@@ -150,9 +153,12 @@ class SourceLayoutTests(unittest.TestCase):
     def test_mapping_leaves_the_right_stick_unused(self):
         mapping = (SRC / "hrp_switch_mapping.inc").read_text(encoding="utf-8")
         self.assertIn("HRP_SWITCH_RIGHT_STICK_ENABLED 0", mapping)
-        self.assertIn("KEY_DLEFT", mapping)
-        self.assertIn("KEY_A", mapping)
-        self.assertIn("KEY_PLUS", mapping)
+        self.assertIn("HidNpadButton_Left", mapping)
+        self.assertIn("HidNpadButton_A", mapping)
+        self.assertIn("HidNpadButton_Plus", mapping)
+        # the 3DS KEY_* names do not exist in libnx and must not creep back in
+        self.assertNotIn("KEY_A", mapping.replace("KEY_*", ""))
+        self.assertNotIn("KEY_DLEFT", mapping.replace("KEY_*", ""))
 
     def test_documentation_exists(self):
         for name in ("README.md", "TH01_INSTALL.txt"):
