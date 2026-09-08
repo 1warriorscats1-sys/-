@@ -1,7 +1,17 @@
 # SANAE — experimental open NRO integration
 
-**Status (2026-09-08): SANAE-specific source implemented and host-tested. No SANAE NRO
-has been compiled or hardware-tested in this workspace. There is no binary download yet.**
+**Status (2026-09-08): first SANAE NRO successfully compiled in GitHub Actions.
+Host tests passed. Switch hardware compatibility is NOT verified.**
+
+- [Download experimental build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34224440055/artifacts/10055121900)
+  (GitHub sign-in may be required; Actions artifacts expire).
+- [Successful build and both jobs](https://github.com/1warriorscats1-sys/-/actions/runs/34224440055)
+- Built source commit: `d9011335c3bf612165ce91c6783e91aedffcdb86`.
+
+The artifact contains the Switch zip, matching corresponding-source archive and BUILD.json.
+Its existence, size (5,867,275 bytes) and non-expired status were confirmed through the
+GitHub API. Downloading it back into this sandbox failed at GitHub's blob-storage endpoint,
+so no local binary inspection or hardware test is claimed.
 
 This is a port of **SANAE's Sylphid Breeze**, not WWW or another game.
 [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch) is the independent
@@ -49,7 +59,7 @@ save names, including SANAE's observed `game_setting.ini` and `save_data01.ini`.
 Keep the old installation/saves untouched; automatic legacy-save migration is not provided.
 A write error is conservatively remembered for the current run even if a later retry works.
 
-## Player layout (for a future compiled experimental build)
+## Player layout (experimental build)
 
 ```text
 sd:/switch/sanae/
@@ -136,12 +146,11 @@ the workflow to exist on the default branch before enabling that dispatch.
 The template builds/tests the headless integration before building the NRO. Its devkitPro
 container uses `latest`, so only the engine source is pinned, not the entire toolchain.
 
-Local Switch compilation is blocked: no installed devkitPro; the official package servers
-and the Docker registry failed TLS access from this sandbox. A fresh workflow push on
-2026-09-08 was explicitly rejected because the GitHub App lacks `workflows` permission.
-The rejected workflow-only commit was removed locally; the published template remains
-in `ci/`, and no Actions run or NRO artifact was produced. A successful upstream engine CI run is not a
-SANAE build and is not offered as a substitute download.
+Local Switch compilation remains unavailable (no devkitPro; package/registry TLS failures),
+but GitHub workflow-write permission was subsequently granted. The workflow is now installed
+at `.github/workflows/sanae-switch.yml`; its activation push successfully built SANAE.
+The integration still cannot dispatch workflows through the API (HTTP 403 for the attempted
+manual dispatch); the successful run above was triggered by the push, not a manual dispatch.
 
 `build_open_runner.py` remains available for **unmodified upstream comparison probes**;
 use `build_sanae.py` for the SANAE-specific target.

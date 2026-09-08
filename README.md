@@ -17,8 +17,10 @@ Local conversion, checked SD-card layout, and source for the save/exit compatibi
 public port, using Butterscotch as its independent engine. SANAE-specific save/exit, CSV
 and audio additions are implemented and host-tested; the build recipe names the output
 `sanae.nro` and uses `sd:/switch/sanae/`. Original `data.win` is read without conversion.
-**No NRO has been compiled or published yet.** Switch compilation, original CSV/audio
-validation, rendering and real Pro/Joy-Con/save/exit tests remain outstanding.
+**The first experimental NRO has compiled successfully in Actions.**
+[Download the build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34224440055/artifacts/10055121900)
+(GitHub sign-in may be required). Original CSV/audio validation, rendering and real
+Pro/Joy-Con/save/exit tests remain outstanding; this is not a hardware-verified release.
 See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
 
 The instructions below describe the **existing legacy proprietary-runtime toolkit**, not
@@ -112,8 +114,9 @@ SANAE_RUNTIME_MAIN="/your/lawful/runtime/main" .venv/bin/python -m unittest disc
 ```
 
 The private integration tests skip when their dependencies or user-supplied runtime are absent.
-No CI job downloads commercial data. GitHub Actions automation is not installed: the current GitHub
-connection lacks permission to create workflows. Local tests are the documented reproducible path.
+No CI job downloads commercial data. The SANAE workflow is installed in `.github/workflows/`;
+its first run passed the host tests and compiled the Switch NRO. See the open-runner guide
+for the artifact, exact source commit and remaining hardware validation.
 
 ## Credits & rights
 
