@@ -657,10 +657,12 @@ HGDIOBJ SelectObject(HDC dcRaw, HGDIOBJ objectRaw)
 }
 BOOL DeleteObject(HGDIOBJ value) { delete static_cast<GdiObject *>(value); return TRUE; }
 int SetBkMode(HDC, int mode) { return mode; }
-int SetTextColor(HDC dcRaw, COLORREF color) { if (dcRaw) static_cast<GdiDc *>(dcRaw)->color = color; return 0; } // th095 port
-// sincosf: present in glibc (>=2.25) but absent from devkitA64's newlib;
-// our definition shadows the library one on the host (identical behaviour).
-int sincosf(float angle, float *sine, float *cosine) { *sine = sinf(angle); *cosine = cosf(angle); return 0; } // th095 port
+// sincosf: emitted by GCC when it fuses adjacent sinf()/cosf() calls. glibc
+// (>= 2.25) already provides the standard C11 symbol, so only supply it for
+// toolchains without one (devkitA64's newlib). Signature follows C11 (void).
+#ifndef __GLIBC__
+extern "C" void sincosf(float angle, float *sine, float *cosine) { *sine = sinf(angle); *cosine = cosf(angle); } // th095 port
+#endif
 COLORREF SetTextColor(HDC raw, COLORREF color) { GdiDc *dc = static_cast<GdiDc *>(raw); COLORREF old = dc->color; dc->color = color; return old; }
 HFONT CreateFontA(int height, int, int, int, int weight, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, LPCSTR)
 {
