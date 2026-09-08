@@ -30,3 +30,6 @@ __pycache__/
 *.pyc
 .venv/
 .cache/
+
+# TH095 port build outputs
+th095/build-*/

@@ -1,0 +1,50 @@
+name: Build TH095 host binary
+
+on:
+  push:
+    paths:
+      - "th095/**"
+      - ".github/workflows/th095-*.yml"
+  pull_request:
+    paths:
+      - "th095/**"
+  workflow_dispatch:
+
+# The Switch NRO job will be added here once the switch_runtime.cpp backend
+# lands (see th095/README.md, "Status").
+
+jobs:
+  # Host smoke build: compiles the pinned upstream reconstruction plus the
+  # port platform layer for x86-64 Linux. Validates that the port layer
+  # keeps up with the pinned upstream commit.
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build python3 \
+            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libgl1-mesa-dev \
+            libfontconfig1-dev
+
+      - name: Fetch upstream reconstruction
+        run: python3 th095/scripts/fetch_upstream.py
+
+      - name: Apply port source patches
+        run: python3 th095/scripts/patch_upstream.py build-inputs/th095-src
+
+      - name: Configure and build (host)
+        run: |
+          cmake -S th095 -B th095/build-host -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTH095_UPSTREAM_SRC="$GITHUB_WORKSPACE/build-inputs/th095-src"
+          cmake --build th095/build-host -j"$(nproc)"
+
+      - name: Upload host binary (smoke artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: th095-host
+          path: th095/build-host/th095-host

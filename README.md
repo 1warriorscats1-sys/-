@@ -28,6 +28,18 @@ and audio additions are implemented and host-tested; the build recipe names the 
 Pro/Joy-Con/save/exit tests remain outstanding; this is not a hardware-verified release.
 See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
 
+## Third port scaffolding: TH095 — Shoot the Bullet
+
+**[東方文花帖 ~ Shoot the Bullet (th095) Switch port](th095/README.md)**
+uses a different base than the two projects above: the TH095 *native
+Win32* engine from the [N0zoM1z0/th095 source reconstruction](https://github.com/N0zoM1z0/th095),
+ported with the TH06/TH07/TH08-recipe (saekaze): untouched game code plus a
+Win32/D3D8/DirectSound compatibility layer (`th095/port/`), fake DX headers,
+and a pinned-upstream build (`th095/scripts/`). Phase 1 (full 64-bit
+compile of all 88 upstream TUs + complete platform-symbol coverage + host
+CI) is done; the Switch runtime/NRO is in progress. Source-only, bring your
+own 1.02a game data — see [th095/README.md](th095/README.md).
+
 ## Second port scaffolding: Wonderful Waking World
 
 **[Touhou Nemuri Sekai ~ Wonderful Waking World (thWWW)](wonderful-waking-world/README.md)**

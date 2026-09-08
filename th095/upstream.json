@@ -1,0 +1,8 @@
+{
+  "engine": "th095",
+  "source": "https://github.com/N0zoM1z0/th095",
+  "branch": "main",
+  "commit": "b864c31b0896eca14988e1af8e4d642a9d337c0a",
+  "license": "MIT (repository-authored code); no game data is redistributed",
+  "note": "Source reconstruction of Touhou 9.5 (東方文花帖) 1.02a. The port builds its main-branch source in runnable (non-DIFFBUILD) mode against the Switch/host platform layer in port/."
+}

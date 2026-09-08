@@ -1,0 +1,41 @@
+TH095 (東方文花帖 ~ Shoot the Bullet) — Nintendo Switch installation
+====================================================================
+
+PREREQUISITES
+-------------
+* A Nintendo Switch running custom firmware (Atmosphère).
+* A legally obtained copy of TH095 1.02a (Japanese original).
+  The game files are YOURS to provide — nothing game-related ships in the
+  source repository.
+
+INSTALLATION (once the Switch NRO is published, Phase 2)
+--------------------------------------------------------
+1. Copy the game files from your TH095 1.02a folder to the SD card:
+
+       sd:/switch/th095/
+           th095.nro          (the homebrew executable)
+           th095.dat          (main game archive)
+           thbgm.dat          (background music archive)
+           msgothic.ttc       (Japanese font, ships with the Windows release)
+
+2. Launch th095.nro from Homebrew Menu / Sphaira / a home forwarder.
+
+MUSIC
+-----
+MIDI BGM is unavailable on Horizon (no system synthesizer). Use the game's
+WAV BGM mode, or silence. (WAV support follows the TH06 port's approach.)
+
+CONTROLS
+--------
+    Left stick / D-pad   Move
+    A                    Shoot / Confirm
+    B                    Bomb
+    L                    Focus (slow motion)
+    Z                    Pause / In-game menu
+
+NOTES
+-----
+* Saves (th095.cfg, scoreth095.dat, replays) are written next to the data.
+* Crashes write th095-crash.txt into the data folder for reporting.
+* This is a homebrew research port. It is not affiliated with ZUN, Team
+  Shanghai Alice, or Nintendo.
