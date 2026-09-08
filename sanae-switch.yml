@@ -1,0 +1,53 @@
+name: SANAE experimental open NRO
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/01a080a0-repo
+    paths:
+      - .github/workflows/sanae-switch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Проверки SANAE на Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Публичные тесты и проверки сохранений
+        run: SANAE_SANITIZE=1 python3 -m unittest discover -s tests -v
+
+      - name: Сборка и тестирование интеграции SANAE
+        run: python3 scripts/build_sanae.py --target headless
+
+  switch:
+    name: Сборка SANAE NRO
+    needs: host-tests
+    runs-on: ubuntu-24.04
+    container:
+      image: devkitpro/devkita64:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка инструментов сборки
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 git cmake make
+
+      - name: Сборка SANAE NRO и архива исходников
+        run: python3 scripts/build_sanae.py --target switch
+
+      - name: Загрузка результата
+        uses: actions/upload-artifact@v4
+        with:
+          name: SANAE-experimental-switch
+          if-no-files-found: error
+          path: |
+            dist/sanae/switch/SANAE-experimental-switch.zip
+            dist/sanae/switch/sanae-source.tar.gz
+            dist/sanae/switch/BUILD.json
