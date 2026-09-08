@@ -169,3 +169,18 @@ Additional actual-GLES checks: a right/jump playback moves the player to
 frame 600. Natural title quit calls `game_end` at frame 290, exits with status 0,
 and does not render a frame after that call. External audio/CSV, later levels,
 real controller radio behavior and full save continuation are still not established.
+
+## Requested Switch controls adjustment
+
+The Switch-only mapping now exchanges physical A/B while retaining the previous
+X/Y mapping: B → gp_face1, A → gp_face2, Y → gp_face3, X → gp_face4.
+The right stick is entirely inert: both axes, its click (R3), and the libnx
+StickR directional bits that previously leaked through `HidNpadButton_Any*`.
+Left-stick axes/directions, D-pad, L/R/ZL/ZR, Plus/Minus, L3, controller enumeration
+and reconnect/restart handling are unchanged. Existing in-game glyph artwork is
+not relabeled by this patch.
+
+`tests/native/sanae_switch_mapping.c` exercises the actual mapping include with
+synthetic libnx inputs, including simultaneous right-stick and valid input.
+The public suite passes locally: 52 total, 41 passed, 11 skipped; native mapping
+and helpers also pass ASan/UBSan. Real controller verification remains necessary.

@@ -11,6 +11,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class SanaeNativeTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('cc'), 'C compiler not installed')
+    def test_switch_mapping(self):
+        with tempfile.TemporaryDirectory(prefix='sanae-input-') as directory:
+            binary = Path(directory)/'mapping'
+            flags = ['-fsanitize=address,undefined', '-fno-omit-frame-pointer'] if os.getenv('SANAE_SANITIZE') == '1' else []
+            subprocess.run(['cc', '-std=c99', '-Wall', '-Wextra', '-Werror', *flags,
+                            '-I', str(ROOT/'open-runner/sanae'),
+                            str(ROOT/'tests/native/sanae_switch_mapping.c'), '-o', str(binary)], check=True)
+            subprocess.run([str(binary)], check=True)
+
+    @unittest.skipUnless(shutil.which('cc'), 'C compiler not installed')
     def test_helpers_with_failure_injection(self):
         with tempfile.TemporaryDirectory(prefix='sanae-test-') as directory:
             binary = Path(directory) / 'helpers'

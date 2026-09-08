@@ -1,4 +1,4 @@
-# Fix opaque HUD occlusion: equal-depth instance order; includes floor collision and restart repairs.
+# SANAE input: swap A/B only; disable right-stick axes, synthesized directions and R3.
 name: SANAE experimental open NRO
 
 on:

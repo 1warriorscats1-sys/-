@@ -23,6 +23,34 @@ def apply(source: Path):
         if p.suffix in ('.h', '.inc'):
             shutil.copy2(p, source / 'src' / p.name)
     shutil.copy2(OVERLAY / 'main.c', source / 'src/switch/main.c')
+    # Swap only A/B; suppress every right-stick path without changing enumeration.
+    replace('src/switch/switch_input.c', '''static void mapLibnxToGml(GamepadSlot* slot, PadState* pad, u64 cur) {
+    if (cur & HidNpadButton_A) slot->buttonDown[0] = true;
+    if (cur & HidNpadButton_B) slot->buttonDown[1] = true;
+    if (cur & HidNpadButton_Y) slot->buttonDown[2] = true;
+    if (cur & HidNpadButton_X) slot->buttonDown[3] = true;
+    if (cur & HidNpadButton_L) slot->buttonDown[4] = true;
+    if (cur & HidNpadButton_R) slot->buttonDown[5] = true;
+    slot->buttonValue[6] = (cur & HidNpadButton_ZL) ? 1.0f : 0.0f;
+    slot->buttonValue[7] = (cur & HidNpadButton_ZR) ? 1.0f : 0.0f;
+    if (cur & HidNpadButton_Minus) slot->buttonDown[8] = true;
+    if (cur & HidNpadButton_Plus) slot->buttonDown[9] = true;
+    if (cur & HidNpadButton_StickL) slot->buttonDown[10] = true;
+    if (cur & HidNpadButton_StickR) slot->buttonDown[11] = true;
+    if (cur & HidNpadButton_AnyUp) slot->buttonDown[12] = true;
+    if (cur & HidNpadButton_AnyDown) slot->buttonDown[13] = true;
+    if (cur & HidNpadButton_AnyLeft) slot->buttonDown[14] = true;
+    if (cur & HidNpadButton_AnyRight) slot->buttonDown[15] = true;
+
+    HidAnalogStickState l = padGetStickPos(pad, 0);
+    HidAnalogStickState r = padGetStickPos(pad, 1);
+    slot->axisValue[0] = l.x / 32767.0f;
+    slot->axisValue[1] = -l.y / 32767.0f;
+    slot->axisValue[2] = r.x / 32767.0f;
+    slot->axisValue[3] = -r.y / 32767.0f;
+}
+''',
+            '#include "sanae_switch_mapping.inc"\n')
     replace('CMakeLists.txt', 'NAME "Butterscotch" AUTHOR "Butterscotch" VERSION "1.0.0"',
             'NAME "SANAE - Sylphid Breeze" AUTHOR "sorehodoh" VERSION "01.01"')
 
