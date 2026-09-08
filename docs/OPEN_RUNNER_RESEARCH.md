@@ -1,6 +1,15 @@
 # Alternative runners checked — 2026-09-08
 
-## Decision
+## Updated acceptance decision
+
+The later hardware reports invalidate treating the initial smoke test as evidence
+that this engine is ready for SANAE. The owner requires behavior equivalent to the
+working NSP, not an indefinite sequence of per-screen repairs. Butterscotch remains
+a research candidate; it is not an accepted replacement. Changing NRO/NSP packaging
+cannot restore missing runtime semantics. See
+[SANAE compatibility investigation](SANAE_GAMEPLAY_COMPATIBILITY.md).
+
+## Earlier candidate selection (not gameplay acceptance)
 
 Prioritize **Butterscotch's existing Switch backend**, rather than continue to base the public
 port on a proprietary GameMaker NX runtime. It already offers the desired direct-data

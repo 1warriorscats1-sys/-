@@ -5,7 +5,7 @@ black HP/ability HUD and dead controller input after pause → title. The indepe
 engine is **not equivalent to the proprietary runner used by the previous NSP**.
 Do not describe it as fully playable or as just the old NSP fixes repackaged.
 
-Pending source repairs include array-target `instance_place` and controller discovery
+The latest experimental compilation includes array-target `instance_place` and controller discovery
 after `game_restart`. Host probes reproduce both failures and pass with the repairs.
 The black HUD has **not** been diagnosed or fixed. The cover converter now uses the
 owner-requested URL instead of the procedural emblem; Switch embedding passed CI.
@@ -15,7 +15,7 @@ See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md` and `ARTWORK_NOTICE.txt`.
 
 **Status (2026-09-08): repaired SANAE 01.01 compiled successfully in GitHub Actions.**
 
-### [Download repaired 01.01](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024/artifacts/10056171118)
+### [Earlier audio/exit regression build — not a complete repair](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024/artifacts/10056171118)
 
 - [Successful host and Switch jobs](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024)
 - Binary source: `72cf353e129f4ed9147a77792a1e73d71b957f3f`.

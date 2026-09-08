@@ -18,10 +18,10 @@ Local conversion, checked SD-card layout, and source for the save/exit compatibi
 
 ---
 
-## New direction: an open NRO that reads original Steam files
+## Experimental route: an open NRO that reads original Steam files
 
-**[SANAE open NRO integration](open-runner/README.md)** is the preferred route for the
-public port, using Butterscotch as its independent engine. SANAE-specific save/exit, CSV
+**[SANAE open NRO integration](open-runner/README.md)** is a compatibility experiment,
+not a demonstrated replacement for the working NSP. It uses Butterscotch as its independent engine. SANAE-specific save/exit, CSV
 and audio additions are implemented and host-tested; the build recipe names the output
 `sanae.nro` and uses `sd:/switch/sanae/`. Original `data.win` is read without conversion.
 **Repaired experimental NRO 01.01 has compiled successfully in Actions: indexed audio groups, exit-frame guard and verified embedded icon.**

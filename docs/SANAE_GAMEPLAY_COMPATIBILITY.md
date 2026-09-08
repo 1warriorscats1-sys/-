@@ -79,3 +79,30 @@ Experimental artifact: https://github.com/1warriorscats1-sys/-/actions/runs/3423
 (18,712,918 bytes). It includes the NRO package, corresponding source, BUILD.json
 and ELF symbol sidecar. The black HP/ability HUD remains unresolved; this is not
 advertised as the requested fully compatible replacement for the working NSP.
+
+## Scope correction: “the same fixes as the NSP”
+
+The owner explicitly rejects an indefinite stream of individual gameplay repairs.
+The following must not be conflated:
+
+* `scripts/runner_exit.py` patches verified AArch64 instruction sites in the
+  proprietary 2024.14.3.260 runner (including its `game_end` epilogue and platform
+  loop). It deliberately rejects other binaries. Those sites and SDK imports do
+  not exist in the independent interpreter.
+* Deferred exit and save flushing can be implemented equivalently at the policy
+  level, but they do not implement GameMaker's VM or renderer.
+* The array-target collision repair is an API-level fix, not an invisible wall
+  added to one room. Restart discovery is a lifecycle fix, not a menu-key hack.
+  Neither establishes compatibility with the rest of the game.
+* Making an NSP forwarder for this NRO would retain the same engine bugs.
+* Reusing the original runtime may retain its compatibility, but no permission
+  to distribute that runtime has been established. A publicly distributable
+  equivalent would require an authorized export/runtime arrangement, or an
+  independently implemented engine validated against the game's required behavior.
+
+No supported one-shot transplant of the old binary patches into this engine has
+been found. Do not patch HUD pixels, inject replacement portraits, or advertise
+another compilation as meeting the requested equivalence. The black HUD still
+requires renderer-level evidence; valid decoded source pixels alone are not that
+evidence. Full acceptance also requires gameplay progression, abilities, save/load,
+restart/controller reconnection and clean exit on Switch, not only room entry.
