@@ -1,25 +1,26 @@
 # SANAE — experimental open NRO integration
 
-**Status (2026-09-08): first SANAE NRO successfully compiled in GitHub Actions.
-Host tests passed. Switch hardware compatibility is NOT verified.**
+**Status (2026-09-08): repaired SANAE 01.01 compiled successfully in GitHub Actions.**
 
-- [Download experimental build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34224440055/artifacts/10055121900)
-  (GitHub sign-in may be required; Actions artifacts expire).
-- [Successful build and both jobs](https://github.com/1warriorscats1-sys/-/actions/runs/34224440055)
-- Built source commit: `d9011335c3bf612165ce91c6783e91aedffcdb86`.
+### [Download repaired 01.01](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024/artifacts/10056171118)
 
-The artifact contains the Switch zip, matching corresponding-source archive and BUILD.json.
-Its existence, size (5,867,275 bytes) and non-expired status were confirmed through the
-GitHub API. Downloading it back into this sandbox failed at GitHub's blob-storage endpoint,
-so no local binary inspection or hardware test is claimed.
+- [Successful host and Switch jobs](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024)
+- Binary source: `72cf353e129f4ed9147a77792a1e73d71b957f3f`.
+- New-game audio-group indexing repaired; incomplete exit frames suppressed.
+- Original wind icon embedded and verified by parsing the actual NRO. Author `sorehodoh`,
+  version `01.01`; Switch window controls remain disabled.
+- Artifact API confirms ID `10056171118`, 18,625,745 bytes, not expired at publication.
+  Includes Switch zip, exact source, BUILD.json and separate crash-symbol zip.
 
-This is a port of **SANAE's Sylphid Breeze**, not WWW or another game.
-[Butterscotch](https://github.com/ButterscotchRunner/Butterscotch) is the independent
-open engine used underneath it. It reads the user's original Steam `data.win` without
-conversion. The engine revision is pinned in `upstream.json`; our additions are in `sanae/`.
-No proprietary GameMaker/Nintendo runtime or game payload is supplied.
+Replace **only** `sd:/switch/sanae/sanae.nro`; do not delete your game files or saves.
+GitHub sign-in may be required for artifact downloads; Actions artifacts expire.
+The new build still needs a user hardware retest. No full-game/no-bugs guarantee is made.
 
-## Latest follow-up build: 01.01
+This is SANAE's Sylphid Breeze integration using the independent Butterscotch engine,
+not another game. Original Steam `data.win` is read unchanged; no proprietary runtime or
+Steam payload is supplied. Upstream is pinned in `upstream.json`; additions are in `sanae/`.
+
+## Earlier window-only build (superseded)
 
 [Download 01.01](https://github.com/1warriorscats1-sys/-/actions/runs/34225607505/artifacts/10055608060)
 — [successful CI run](https://github.com/1warriorscats1-sys/-/actions/runs/34225607505),

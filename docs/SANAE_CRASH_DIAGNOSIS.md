@@ -74,3 +74,20 @@ Bluetooth Pro Controller and return to hbmenu were confirmed by the user for the
 build. Seeing a save file after a crash is not proof of successful gameplay/progress saves.
 No claim of complete gameplay, correct original CSV semantics, or absence of other bugs
 is made until the repaired build is tested on the user's Switch with all original files.
+
+## Final build and additional real-data host probes
+
+[Repaired build](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024), source
+`72cf353e129f4ed9147a77792a1e73d71b957f3f`: host tests/sanitized audio regression and Switch
+compilation passed. The mandatory actual-NRO icon/NACP verifier passed before packaging.
+Local public suite: 49 tests, 38 passed and 11 private-runtime tests skipped.
+
+Using the unchanged private original data, a 600-frame synthetic Z-input run again
+reached tutorial room 28 with 82 instances and returned 0. A separate real menu-quit
+probe pressed Down at frames 120/180, then Z at 240 (release each key on the next frame).
+The trace shows the original `obj_title_main_Step_0` calling `game_end` during the step
+starting at frame 290; the process returned 0 without a subsequent frame-end/presentation.
+The original SHA-256 remains `94893a08f434e0698c2cc46bf0414b97ef033d13330efc127475c6a525a8cd07`.
+These were no-op-renderer/no-audio probes; the missing original CSV is logged as an error,
+not counted as passing dialogue support. Visual and full-game/audio validation still
+requires the original external files and a Switch test of the repaired NRO.
