@@ -65,14 +65,25 @@ jobs:
             } > /tmp/ci-diag.txt
             echo "----- TH095 CI DIAGNOSTICS -----"
             cat /tmp/ci-diag.txt
+            # Channel A: GitHub issue (best effort)
             python3 -c 'import json,sys; print(json.dumps({"title": "[th095-ci-diag] run " + sys.argv[1], "body": "Auto-posted TH095 CI diagnostics (configure/build failure). Safe to close once the build is green."}))' "$GITHUB_RUN_ID" > /tmp/issue-payload.json
-            issue_json=$(curl -sS -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues" -d @/tmp/issue-payload.json)
+            issue_json=$(curl -sS -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues" -d @/tmp/issue-payload.json || echo "CURL_FAILED")
             issue_number=$(printf '%s' "$issue_json" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("number",""))' 2>/dev/null || true)
             if [ -n "$issue_number" ]; then
               python3 -c 'import json; diag=open("/tmp/ci-diag.txt").read(); print(json.dumps({"body": "Full diagnostics:\n\n```\n" + diag + "\n```"}))' > /tmp/comment-payload.json
               curl -sS -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$issue_number/comments" -d @/tmp/comment-payload.json -o /dev/null || true
               echo "Diagnostics posted to issue #$issue_number"
+            else
+              echo "issue post failed: $(printf '%s' "$issue_json" | head -c 300)"
             fi
+            # Channel B: push diagnostics to the ci-diag branch (readable via git)
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            mkdir -p .ci-diag
+            cp /tmp/ci-diag.txt ".ci-diag/run-$GITHUB_RUN_ID.txt"
+            git add .ci-diag
+            git commit -q -m "ci: diagnostics for run $GITHUB_RUN_ID" || true
+            git push -q -f origin "HEAD:refs/heads/ci-diag" || echo "ci-diag push failed"
             exit 1
           fi
 
