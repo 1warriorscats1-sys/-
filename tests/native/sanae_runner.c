@@ -46,7 +46,13 @@ static void restart_gamepads(void) {
     runner->gamepads->slots[0].connected=runner->gamepads->slots[0].connectedPrev=true;
     runner->gamepads->slots[7].connected=runner->gamepads->slots[7].connectedPrev=true;
     runner->sanaeRediscoverGamepads=false;
+    RValue buffer_args[]={RValue_makeReal(1024),RValue_makeReal(0),RValue_makeReal(1)};
+    RValue deleted=invoke(vm,"buffer_create",buffer_args,3);
+    discard(invoke(vm,"buffer_create",buffer_args,3));
+    discard(invoke(vm,"buffer_delete",&deleted,1));
     Runner_reset(runner);
+    assert(runner->gmlBufferPool==NULL);
+    discard(invoke(vm,"buffer_create",buffer_args,3)); /* Runner_free must release this too. */
     assert(runner->sanaeRediscoverGamepads);
     assert(runner->gamepads->slots[0].connected && runner->gamepads->slots[7].connected);
     RunnerGamepad_beginFrame(runner->gamepads); /* must not erase rediscovery */
@@ -148,8 +154,9 @@ static void combat_events(bool vacuum, bool reversed_creation, int variant) {
         {.eventSubtype=0,.actionCount=1,.actions=&action},
         {.eventSubtype=1,.actionCount=1,.actions=&action}
     };
-    /* call.i fixture(); popz.v; exit.i -- entirely synthetic, no game code */
-    uint32_t bytecode[]={0xD9020000,0,0x9E050000,0x9D020000};
+    /* call.i fixture(); pop.v local; exit.i -- grows zero-sized BC17 locals. */
+    uint32_t bytecode[]={0xD9020000,0,0x4555FFF9,0xA0000000,0x9D020000};
+    Variable local={.name="probe_result",.instanceType=-7,.varID=0,.occurrences=1,.firstAddress=8};
     CodeEntry code={.name="synthetic_collision_probe",.length=sizeof(bytecode)};
     Function function={.name="synthetic_combat_probe",.occurrences=1};
     for (int i=0;i<3;i++) {
@@ -166,6 +173,7 @@ static void combat_events(bool vacuum, bool reversed_creation, int variant) {
     dw.code.count=1; dw.code.entries=&code;
     dw.func.functionCount=1; dw.func.functions=&function;
     dw.bytecodeBuffer=(uint8_t*)bytecode;
+    dw.vari.variableCount=1; dw.vari.variables=&local;
     VMContext *vm=VM_create(&dw);
     Renderer *renderer=NoopRenderer_create();
     AudioSystem *audio=(AudioSystem*)NoopAudioSystem_create();
@@ -198,6 +206,11 @@ static void combat_events(bool vacuum, bool reversed_creation, int variant) {
     renderer->vtable->destroy(renderer); audio->vtable->destroy(audio); NoopFileSystem_destroy(fs);
 }
 int main(void) {
+    struct { int32_t key; int value; } *signed_keys=NULL;
+    int32_t negative=-1, minimum=INT32_MIN;
+    hmput(signed_keys,negative,42); hmput(signed_keys,minimum,7);
+    assert(hmget(signed_keys,negative)==42 && hmget(signed_keys,minimum)==7);
+    hmfree(signed_keys);
     for (int creation=0;creation<2;creation++) {
         combat_events(false,creation,COMBAT_NORMAL);
         for (int variant=COMBAT_NORMAL;variant<=COMBAT_MISS;variant++)

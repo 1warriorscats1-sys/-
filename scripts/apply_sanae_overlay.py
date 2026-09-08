@@ -89,6 +89,41 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
         if (runner->currentIni != nullptr) return RValue_makeUndefined();
     }''')
 
+    # Sanitizer-confirmed undefined behavior on empty containers/BC17 locals.
+    replace('src/runner.c',
+            '        qsort(dst->events, dst->eventCount, sizeof(FlattenedCollisionEvent), compareTargetObjectIndexAscending);',
+            '        if (dst->eventCount > 1)\n'
+            '            qsort(dst->events, dst->eventCount, sizeof(FlattenedCollisionEvent), compareTargetObjectIndexAscending);')
+    replace('src/vm.c',
+            '        memcpy(resizedLocalVars, ctx->localVars, sizeof(RValue) * ctx->localVarCount);',
+            '        if (ctx->localVarCount > 0)\n'
+            '            memcpy(resizedLocalVars, ctx->localVars, sizeof(RValue) * ctx->localVarCount);')
+    replace('src/event_table.c',
+            '    memset(slotCursor, 0, (size_t) slotCount * sizeof(uint32_t));',
+            '    if (slotCount > 0) memset(slotCursor, 0, (size_t) slotCount * sizeof(uint32_t));')
+    # Negative/high-bit integer keys must not shift a signed promoted byte.
+    for prefix in ('    data = ', '    unsigned int hash = ', '    size_t hash = '):
+        before = prefix + 'd[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);'
+        replace('vendor/stb/ds/stb_ds.h', before,
+                before.replace('(d[3] << 24)', '((unsigned int)d[3] << 24)'))
+    replace('vendor/stb/ds/stb_ds.h', 'case 4: data |= (d[3] << 24);',
+            'case 4: data |= ((unsigned int)d[3] << 24);')
+    # Buffer storage survives ordinary room changes, but not game_restart/free.
+    replace('src/runner.c', '    runner->dsGridPool = nullptr;', """    runner->dsGridPool = nullptr;
+
+    for (ptrdiff_t i = 0; i < arrlen(runner->gmlBufferPool); ++i) {
+        free(runner->gmlBufferPool[i].data);
+    }
+    arrfree(runner->gmlBufferPool);
+    runner->gmlBufferPool = nullptr;""")
+    # Headless tooling: avoid allocating empty hash maps in a by-value args copy.
+    for field in ('dumpFrames', 'dumpJsonFrames', 'screenshotFrames', 'screenshotSurfacesFrames'):
+        replace('src/loop.c', f'hmget(args.{field}, runner->frameCount)',
+                f'(args.{field} != nullptr && hmget(args.{field}, runner->frameCount))')
+    replace('src/noop_audio_system.c',
+            'static void noopDestroy(AudioSystem* audio) {\n    free(audio);',
+            'static void noopDestroy(AudioSystem* audio) {\n    arrfree(audio->audioGroups);\n    free(audio);')
+
     # The slot-major dedup order depends on collision target IDs. SANAE's
     # bilateral contact/capture scripts require later concrete objects first:
     # player/vacuum must observe the enemy before its damage/destroy handler.
