@@ -1,0 +1,41 @@
+Touhou Nemuri Sekai ~ Wonderful Waking World - experimental open Switch port
+
+This is thWWW-specific integration on top of the independent Butterscotch
+engine. It is not an official release, not a Nintendo/GameMaker runtime, and
+not another game. Compilation does NOT establish hardware compatibility.
+
+No game files, artwork, music or closed runtime are distributed here. You must
+supply the original files from your own copy of the game (it is distributed
+free of charge on Steam and itch.io by Oligarchomp).
+
+INSTALL
+  1. Copy the switch folder to your SD card root.
+  2. Into sd:/switch/thwww/ copy the ORIGINAL, unchanged files from your PC
+     installation:
+        thwww.nro          (from this package)
+        data.win           (required)
+        audiogroup*.dat    (all of them, if your build has any)
+        every other Included File shipped next to the .exe
+     No PC-side conversion is required.
+  3. Launch thwww.nro from hbmenu with application / full-memory access,
+     not album mode.
+
+CONTROLS (Touhou convention)
+  A               shoot
+  B               bomb / spell card
+  L / R / ZL / ZR focus (slow) movement
+  D-pad, left stick   movement
+  Plus / Minus    pause / menu
+  Right stick     intentionally inert
+
+SAVES
+  Saves and settings live in sd:/switch/thwww/saves/, diagnostics in
+  sd:/switch/thwww/thwww.log. A .bak file is the previous save generation;
+  keep it if a write error is reported. Use the game's own exit option.
+  Force-closing from HOME, crashes and power loss are NOT orderly exits, and
+  these backups do not solve SD metadata atomicity under power failure.
+
+DISTRIBUTORS
+  Ship the matching thwww-source.tar.gz next to the binary zip, with the
+  engine's AGPL-3.0 license and dependency notices. Do not include any game
+  file or closed runtime. See wonderful-waking-world/README.md in that source.

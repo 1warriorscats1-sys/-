@@ -28,6 +28,15 @@ and audio additions are implemented and host-tested; the build recipe names the 
 Pro/Joy-Con/save/exit tests remain outstanding; this is not a hardware-verified release.
 See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
 
+## Second port scaffolding: Wonderful Waking World
+
+**[Touhou Nemuri Sekai ~ Wonderful Waking World (thWWW)](wonderful-waking-world/README.md)**
+reuses the same open-engine recipe in its own folder: integration overlay, build
+script, NRO asset verifier, host tests and CI producing `thwww.nro` for
+`sd:/switch/thwww/`. It is **unbuilt scaffolding** — never compiled for Switch and
+never run on hardware. No game data or artwork is included; the player supplies the
+original files from their own copy.
+
 The instructions below describe the **existing legacy proprietary-runtime toolkit**, not
 installation of a finished open NRO. Do not mix the two engines' data preparation or saves.
 
