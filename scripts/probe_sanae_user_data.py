@@ -16,6 +16,10 @@ Scenario families (env SANAE_PRIVATE_SCENARIO):
 * umbrella_room_<RoomName>    — capture Kogasa in the tutorial, raise the
                                 shield, then carry the held action into the real
                                 Marisa room and watch shield hits.
+
+Crash visibility: any scenario that does not exit cleanly is re-run under gdb
+(-batch, backtrace) and the tail of that log is embedded in the report so the
+Check summary shows the abort/segfault site without publishing game data.
 """
 
 import json
@@ -31,6 +35,13 @@ REPORT = ROOT / '.cache/user-data-report.json'
 # overlay). Runs before each game step. Reads engine state directly; writes no
 # game files and changes no game state except the deliberate spawn/room-entry
 # requests made by the existing probe scenarios.
+#
+# Order inside the hook matters:
+#  1. the audit scan always runs against the instance list as it was at the
+#     start of this platform call, and
+#  2. deliberate spawns / room-entry requests are issued afterwards and only
+#     once per scenario, so a freshly created instance is never scanned in the
+#     same call while it is still half-initialised.
 HOOK = r'''
     const char *scenario = getenv("SANAE_PRIVATE_SCENARIO");
     if (scenario) {
@@ -42,6 +53,7 @@ HOOK = r'''
         for (int i = 0; i < probeCount && runnerProbe; ++i) {
             Instance *a = runnerProbe->instances[i];
             if (!a->active) continue;
+            if (a->objectIndex < 0 || (unsigned)a->objectIndex >= runnerProbe->dataWin->objt.count) continue;
             const char *name = runnerProbe->dataWin->objt.objects[a->objectIndex].name;
             if (!name) continue;
             if (!strcmp(name, "obj_P01_KOCHIYASanae")) { if (!playerProbe) playerProbe = a; }
@@ -49,50 +61,17 @@ HOOK = r'''
             else if (strstr(name, "KIRISAMEMarisa")) { if (!bossProbe) { bossProbe = a; bossName = name; } }
         }
 
-        /* --- deliberate probe actions (same as earlier diagnostic runs) --- */
-        if (frame == 600 && playerProbe && runnerProbe) {
-            const char *spawn = NULL;
-            float x = playerProbe->x, y = playerProbe->y;
-            if (!strcmp(scenario, "umbrella")) { spawn = "obj_app_es02"; x += 48; }
-            else if (!strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9)) spawn = scenario;
-            else if (!strncmp(scenario, "Room_", 5) || !strncmp(scenario, "room_", 5)) {
-                const char *roomName = scenario[0] == 'R' ? scenario : scenario + 5;
-                for (unsigned i = 0; i < runnerProbe->dataWin->room.count; ++i)
-                    if (!strcmp(runnerProbe->dataWin->room.rooms[i].name, roomName))
-                        runnerProbe->pendingRoom = (int)i;
-            }
-            if (spawn) {
-                for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
-                    if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
-                        Runner_createInstance(runnerProbe, x, y, (int)i);
-                        break;
-                    }
-            }
-        }
-        if (!strcmp(scenario, "umbrella") && guardProbe && frame >= 1100 && frame <= 1800 && frame % 100 == 0) {
-            const char *spawn = "obj_b02e03_starS_shot";
-            float x = guardProbe->x + 32, y = guardProbe->y - 8;
-            for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
-                if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
-                    Runner_createInstance(runnerProbe, x, y, (int)i);
-                    break;
-                }
-        }
-        if (!strncmp(scenario, "umbrella_room_", 14) && frame == 1200 && playerProbe && runnerProbe) {
-            const char *roomName = scenario + 14;
-            for (unsigned i = 0; i < runnerProbe->dataWin->room.count; ++i)
-                if (!strcmp(runnerProbe->dataWin->room.rooms[i].name, roomName))
-                    runnerProbe->pendingRoom = (int)i;
-        }
-
-        /* --- compact per-frame audit --- */
         int wantContact = (!strncmp(scenario, "room_", 5) || !strncmp(scenario, "umbrella_room_", 14) ||
                            !strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9));
         int wantGuard = (!strcmp(scenario, "umbrella") || !strncmp(scenario, "umbrella_room_", 14));
+
+        /* --- compact per-frame audit (before any action this call) --- */
         if ((wantContact || wantGuard) && runnerProbe && frame > 0) {
             static int lastHp = -1, lastBossHp = -1, lastGuardHp = -1, firstBossFrame = -1;
             float playerHp = -1, bossHp = -1, guardHp = -1;
             VMContext *vmProbe = runnerProbe->vmContext;
+            const char *roomName = runnerProbe->currentRoom && runnerProbe->currentRoom->name
+                                       ? runnerProbe->currentRoom->name : "?";
 
             if (playerProbe && shgeti(vmProbe->varNameMap, "hp_now") >= 0) {
                 RValue v = VM_structGetVariableByVarId(playerProbe, shget(vmProbe->varNameMap, "hp_now"), -1);
@@ -125,9 +104,11 @@ HOOK = r'''
                 touchBoss = !(pb.left >= r || l >= pb.right || pb.top >= b || t >= pb.bottom);
             }
             if (pb.valid) {
-                for (int i = 0; i < probeCount; ++i) {
+                int n = (int)arrlen(runnerProbe->instances);
+                for (int i = 0; i < n; ++i) {
                     Instance *o = runnerProbe->instances[i];
                     if (!o->active || o == playerProbe || o == bossProbe || o == guardProbe) continue;
+                    if (o->objectIndex < 0 || (unsigned)o->objectIndex >= runnerProbe->dataWin->objt.count) continue;
                     const char *on = runnerProbe->dataWin->objt.objects[o->objectIndex].name;
                     InstanceBBox ob = Collision_computeBBox(runnerProbe, o);
                     if (!ob.valid) continue;
@@ -139,9 +120,11 @@ HOOK = r'''
             }
             int guardStarHits = 0;
             if (gb.valid) {
-                for (int i = 0; i < probeCount; ++i) {
+                int n = (int)arrlen(runnerProbe->instances);
+                for (int i = 0; i < n; ++i) {
                     Instance *o = runnerProbe->instances[i];
                     if (!o->active || o == guardProbe || o == playerProbe || o == bossProbe) continue;
+                    if (o->objectIndex < 0 || (unsigned)o->objectIndex >= runnerProbe->dataWin->objt.count) continue;
                     const char *on = runnerProbe->dataWin->objt.objects[o->objectIndex].name;
                     InstanceBBox ob = Collision_computeBBox(runnerProbe, o);
                     if (!ob.valid) continue;
@@ -156,7 +139,6 @@ HOOK = r'''
             int periodic = (frame % 200) == 0;
             int interesting = overBoss || touchBoss || hpChanged || guardStarHits > 0 || bulletCount > 0 || periodic;
             if (interesting) {
-                const char *roomName = runnerProbe->currentRoom && runnerProbe->currentRoom->name ? runnerProbe->currentRoom->name : "?";
                 logInfo("SANAE_AUDIT frame=%d room=%s hp=%g boss=%s bhp=%g firstboss=%d over=%d touch=%d bullets=%d ov=%s guard=%g guardstar=%d gov=%s\n",
                     frame, roomName, playerHp, bossName ? bossName : "-", bossHp, firstBossFrame,
                     overBoss, touchBoss, bulletCount, overlapNames[0] ? overlapNames : "-",
@@ -165,6 +147,59 @@ HOOK = r'''
             if ((int)playerHp != lastHp) lastHp = (int)playerHp;
             if ((int)bossHp != lastBossHp) lastBossHp = (int)bossHp;
             if ((int)guardHp != lastGuardHp) lastGuardHp = (int)guardHp;
+        }
+
+        /* --- deliberate probe actions (once per scenario, only when in game) --- */
+        if (strcmp(scenario, "baseline")) {
+            static int probeSpawnDone = 0, probeRoomEntered = 0;
+            int inGame = playerProbe != NULL && runnerProbe != NULL;
+            const char *roomNow = runnerProbe && runnerProbe->currentRoom && runnerProbe->currentRoom->name
+                                      ? runnerProbe->currentRoom->name : NULL;
+
+            if (!probeSpawnDone && inGame && frame >= 600 && frame <= 2500) {
+                const char *spawn = NULL;
+                float x = playerProbe->x, y = playerProbe->y;
+                if (!strcmp(scenario, "umbrella")) { spawn = "obj_app_es02"; x += 48; }
+                else if (!strncmp(scenario, "obj_b02_", 8) || !strncmp(scenario, "obj_mb00_", 9)) spawn = scenario;
+                else if (!strncmp(scenario, "room_", 5)) {
+                    const char *roomName = scenario + 5;
+                    for (unsigned i = 0; i < runnerProbe->dataWin->room.count; ++i)
+                        if (!strcmp(runnerProbe->dataWin->room.rooms[i].name, roomName))
+                            runnerProbe->pendingRoom = (int)i;
+                }
+                if (spawn) {
+                    for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
+                        if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
+                            Runner_createInstance(runnerProbe, x, y, (int)i);
+                            break;
+                        }
+                }
+                probeSpawnDone = 1;
+            }
+
+            if (!strncmp(scenario, "umbrella_room_", 14) && !probeRoomEntered && inGame &&
+                frame >= 1200 && frame <= 3500) {
+                const char *target = scenario + 14;
+                if (roomNow && !strcmp(roomNow, target)) {
+                    probeRoomEntered = 1;
+                } else {
+                    for (unsigned i = 0; i < runnerProbe->dataWin->room.count; ++i)
+                        if (!strcmp(runnerProbe->dataWin->room.rooms[i].name, target))
+                            runnerProbe->pendingRoom = (int)i;
+                    probeRoomEntered = 1;
+                }
+            }
+
+            if (!strcmp(scenario, "umbrella") && probeSpawnDone && guardProbe && runnerProbe &&
+                frame >= 1100 && frame <= 3600 && frame % 100 == 0) {
+                const char *spawn = "obj_b02e03_starS_shot";
+                float x = guardProbe->x + 32, y = guardProbe->y - 8;
+                for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
+                    if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
+                        Runner_createInstance(runnerProbe, x, y, (int)i);
+                        break;
+                    }
+            }
         }
     }
 '''
@@ -184,6 +219,13 @@ def summarize(path):
             **{k: variables[k] for k in ('hp_now', 'hp_max', 'mode_damage', 'mode_invin',
                'mode_catch', 'next_break', 'set_action') if k in variables}})
     return result
+
+
+def tail(lines, count=22, width=240):
+    out = []
+    for line in lines[-count:]:
+        out.append(line[:width])
+    return out
 
 
 def parse_audit(log):
@@ -250,6 +292,12 @@ def parse_audit(log):
     }
 
 
+def start_keys(inputs, edge):
+    # Same menu/confirm taps baseline uses to reach the tutorial reliably.
+    for frame in range(60, 361, 60):
+        edge(frame, 90)
+
+
 def main():
     data, = (ROOT / '.cache/user-game').rglob('data.win')
     report = json.loads(REPORT.read_text())
@@ -284,13 +332,14 @@ def main():
             end = 900
             frames = [610, 700, 850]
             if scenario in ('baseline', 'obj_b02_KIRISAMEMarisa'):
-                for frame in range(60, 361, 60):
-                    edge(frame, 90)
+                start_keys(inputs, edge)
             elif scenario == 'umbrella':
+                start_keys(inputs, edge)
                 edge(580, 88, 100); edge(720, 40, 30); edge(1000, 88, 900)
                 end = 2000
                 frames = [1050, 1150, 1250, 1350, 1450, 1550, 1601, 1650, 1850]
             elif scenario.startswith('room_'):
+                start_keys(inputs, edge)
                 end = 8000
                 frames = [850, 1400, 2400, 4800, 7800]
                 for frame in range(660, 7900, 45):
@@ -303,6 +352,7 @@ def main():
             elif scenario.startswith('umbrella_room_'):
                 # Tutorial capture of Kogasa's ability + raised shield, then
                 # carry the held action into the real Marisa room at frame 1200.
+                start_keys(inputs, edge)
                 edge(580, 88, 100); edge(720, 40, 30); edge(1000, 88, 7000)
                 end = 8000
                 frames = [850, 1400, 2400, 4800, 7800]
@@ -313,19 +363,37 @@ def main():
                     '--disable-log-colours']
             for frame in frames:
                 args += ['--dump-frame-json', str(frame)]
+            env = dict(os.environ, SANAE_PRIVATE_SCENARIO=scenario)
+            log = ''
+            code = 0
             try:
-                proc = subprocess.run(args, env=dict(os.environ, SANAE_PRIVATE_SCENARIO=scenario),
-                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                proc = subprocess.run(args, env=env, stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT, timeout=420)
                 log = proc.stdout.decode(errors='replace')
                 code = proc.returncode
             except subprocess.TimeoutExpired as error:
-                log = (error.stdout or b'').decode(errors='replace'); code = 'timeout'
+                log = (error.stdout or b'').decode(errors='replace')
+                code = 'timeout'
             (case / 'private.log').write_text(log)
             record = {'scenario': scenario, 'exit': code,
                       'missing_csv_count': log.count('missing/invalid CSV'),
                       'unknown_function_count': log.count('Unknown function'),
                       'audit': parse_audit(log),
                       'snapshots': [summarize(p) for p in sorted(case.glob('state-*.json'))]}
+            if code not in (0,):
+                # Reproduce under gdb so the abort/segv site is visible in the report.
+                gdb_log = ''
+                try:
+                    gdb = subprocess.run(['gdb', '-batch', '-nx', '-ex', 'run', '-ex', 'bt 40',
+                                          '-ex', 'info registers', '--args'] + args,
+                                         env=env, stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT, timeout=420)
+                    gdb_log = gdb.stdout.decode(errors='replace')
+                except subprocess.TimeoutExpired as error:
+                    gdb_log = (error.stdout or b'').decode(errors='replace')
+                    gdb_log += '\n[gdb timed out]'
+                (case / 'crash.log').write_text(gdb_log)
+                record['crash_log_tail'] = tail(gdb_log.splitlines())
             report['probes'].append(record)
             REPORT.write_text(json.dumps(report, indent=2))
         report.update(status='probes completed', completed=True,
