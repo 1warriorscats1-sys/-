@@ -1,0 +1,46 @@
+name: SANAE user-data investigation
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/01a080a0-repo]
+    paths: [.github/workflows/sanae-private-probe.yml]
+permissions:
+  contents: read
+  checks: write
+jobs:
+  investigate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Download and inspect user-supplied archive (never publish assets)
+        env:
+          SANAE_USER_ARCHIVE_ID: ${{ vars.SANAE_USER_ARCHIVE_ID }}
+        run: |
+          python3 -m pip install gdown py7zr
+          python3 scripts/inspect_sanae_user_archive.py
+      - name: Build clean headless runner
+        run: python3 scripts/build_sanae.py --target headless
+      - name: Probe original data without modifying game files
+        run: python3 scripts/probe_sanae_user_data.py
+      - name: Publish metadata and test results only
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = '.cache/user-data-report.json';
+            const report = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : {status: 'No report: download or setup failed'};
+            await github.rest.checks.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              name: 'SANAE user-data report', head_sha: context.sha,
+              status: 'completed', conclusion: report.completed ? 'success' : 'neutral',
+              output: {title: 'Private game data investigation (no assets published)',
+                summary: 'Host diagnostic only; not Switch parity or a full playthrough.',
+                text: '```json\n' + JSON.stringify(report, null, 2).slice(0, 58000) + '\n```'}
+            });
+      - name: Remove private files
+        if: always()
+        run: rm -rf .cache/user-game .cache/user-download .cache/user-probe
