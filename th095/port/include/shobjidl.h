@@ -19,6 +19,8 @@ typedef IShellLink IShellLinkA;
 typedef IShellLink *LPIShellLink;
 typedef IShellLinkA *LPIShellLinkA;
 
-const GUID CLSID_ShellLink = { 0x00021401, 0, 0, {0xC0, 0, 0, 0, 0, 0, 0, 0x46} };
-const GUID IID_IShellLinkA = { 0x000214F9, 0, 0, {0xC0, 0, 0, 0, 0, 0, 0, 0x46} };
-const GUID IID_IPersistFile = { 0x0000010b, 0x0000, 0x0000, {0xC0, 0, 0, 0, 0, 0, 0x46} };
+// Defined once in win32_compat.cpp (single TU) to avoid
+// multiple-definition errors across TUs that include this header.
+extern const GUID CLSID_ShellLink;
+extern const GUID IID_IShellLinkA;
+extern const GUID IID_IPersistFile;

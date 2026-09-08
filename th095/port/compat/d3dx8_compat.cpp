@@ -11,6 +11,8 @@
 namespace
 {
 UINT BytesPerPixel(D3DFORMAT format)
+
+
 {
     switch (format)
     {
@@ -125,6 +127,40 @@ HRESULT CopyRgbaToSurface(IDirect3DSurface8 *destinationRaw, const RECT *destina
     th095_linux_surface_changed(destinationRaw); return S_OK;
 }
 
+
+HRESULT CopySurface(IDirect3DSurface8 *destinationRaw, const RECT *destinationRectRaw,
+                    IDirect3DSurface8 *sourceRaw, const RECT *sourceRectRaw, D3DCOLOR colorKey)
+{
+    LinuxSurfaceAccess source;
+    if (!th095_linux_surface_access(sourceRaw, &source, true) || source.pixels == NULL) return E_INVALIDARG;
+    std::vector<BYTE> rgba(source.width * source.height * 4);
+    UINT sourceBytes = BytesPerPixel(source.format);
+    for (UINT y = 0; y < source.height; ++y)
+        for (UINT x = 0; x < source.width; ++x)
+            DecodePixel(source.pixels + y * source.pitch + x * sourceBytes, source.format,
+                        &rgba[(y * source.width + x) * 4]);
+    return CopyRgbaToSurface(destinationRaw, destinationRectRaw, rgba.empty() ? NULL : &rgba[0],
+                             source.width, source.height, source.width * 4, sourceRectRaw, colorKey);
+}
+
+SDL_Surface *LoadImage(LPCVOID data, UINT size)
+{
+    if (data == NULL || size == 0) return NULL;
+    SDL_RWops *stream = SDL_RWFromConstMem(data, size);
+    if (stream == NULL) return NULL;
+    SDL_Surface *loaded = IMG_Load_RW(stream, 1);
+    if (loaded == NULL) return NULL;
+    SDL_Surface *rgba = SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(loaded); return rgba;
+}
+
+void SetImageInfo(D3DXIMAGE_INFO *info, UINT width, UINT height, D3DFORMAT format)
+{
+    if (info == NULL) return;
+    info->Width = width; info->Height = height; info->Depth = 1; info->MipLevels = 1; info->Format = format;
+}
+} // namespace
+
 // TH095 calls D3DXLoadSurfaceFromMemory(dest, NULL, destRect, memory, format,
 // pitch, NULL, srcRect, filter, colorKey) — the second and seventh arguments
 // are always NULL in the reconstruction. Decodes raw source pixels (any
@@ -177,39 +213,6 @@ HRESULT D3DXLoadSurfaceFromMemory(IDirect3DSurface8 *destinationRaw, const RECT 
     th095_linux_surface_changed(destinationRaw);
     return S_OK;
 }
-
-HRESULT CopySurface(IDirect3DSurface8 *destinationRaw, const RECT *destinationRectRaw,
-                    IDirect3DSurface8 *sourceRaw, const RECT *sourceRectRaw, D3DCOLOR colorKey)
-{
-    LinuxSurfaceAccess source;
-    if (!th095_linux_surface_access(sourceRaw, &source, true) || source.pixels == NULL) return E_INVALIDARG;
-    std::vector<BYTE> rgba(source.width * source.height * 4);
-    UINT sourceBytes = BytesPerPixel(source.format);
-    for (UINT y = 0; y < source.height; ++y)
-        for (UINT x = 0; x < source.width; ++x)
-            DecodePixel(source.pixels + y * source.pitch + x * sourceBytes, source.format,
-                        &rgba[(y * source.width + x) * 4]);
-    return CopyRgbaToSurface(destinationRaw, destinationRectRaw, rgba.empty() ? NULL : &rgba[0],
-                             source.width, source.height, source.width * 4, sourceRectRaw, colorKey);
-}
-
-SDL_Surface *LoadImage(LPCVOID data, UINT size)
-{
-    if (data == NULL || size == 0) return NULL;
-    SDL_RWops *stream = SDL_RWFromConstMem(data, size);
-    if (stream == NULL) return NULL;
-    SDL_Surface *loaded = IMG_Load_RW(stream, 1);
-    if (loaded == NULL) return NULL;
-    SDL_Surface *rgba = SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_RGBA32, 0);
-    SDL_FreeSurface(loaded); return rgba;
-}
-
-void SetImageInfo(D3DXIMAGE_INFO *info, UINT width, UINT height, D3DFORMAT format)
-{
-    if (info == NULL) return;
-    info->Width = width; info->Height = height; info->Depth = 1; info->MipLevels = 1; info->Format = format;
-}
-} // namespace
 
 D3DXMATRIX *D3DXMatrixIdentity(D3DXMATRIX *out)
 {

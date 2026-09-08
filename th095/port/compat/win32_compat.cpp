@@ -716,9 +716,10 @@ void CoUninitialize(void) {}
 HRESULT CoCreateInstance(REFGUID, LPVOID, DWORD, REFIID, LPVOID *) { return E_NOTIMPL; }
 } // extern C
 
-extern const GUID CLSID_ShellLink = {0};
+extern const GUID CLSID_ShellLink = { 0x00021401, 0, 0, {0xC0, 0, 0, 0, 0, 0, 0, 0x46} }; // th095 port
 extern const GUID IID_IShellLink = {1};
-extern const GUID IID_IPersistFile = {2};
+extern const GUID IID_IShellLinkA = { 0x000214F9, 0, 0, {0xC0, 0, 0, 0, 0, 0, 0, 0x46} }; // th095 port
+extern const GUID IID_IPersistFile = { 0x0000010b, 0x0000, 0x0000, {0xC0, 0, 0, 0, 0, 0, 0, 0x46} }; // th095 port
 const GUID GUID_NULL = {0};
 const GUID IID_IDirectSoundNotify = {3};
 const GUID IID_IDirectInput8A = {4};

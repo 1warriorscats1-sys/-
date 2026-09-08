@@ -38,6 +38,8 @@ typedef enum _D3DFORMAT
     D3DFMT_X1R5G5B5 = 24,
     D3DFMT_A1R5G5B5 = 25,
     D3DFMT_A4R4G4B4 = 26,
+    D3DFMT_DXT1 = 27,  // th095 port: compressed texture (internal value, self-consistent)
+    D3DFMT_A8 = 28,   // th095 port: alpha only (internal value, self-consistent)
     D3DFMT_D16 = 80,
     D3DFMT_FORCE_DWORD = 0x7fffffff
 } D3DFORMAT;

@@ -40,7 +40,11 @@ file(GLOB TH095_GAME_SOURCES
 set(TH095_COMPAT_SOURCES
     ${TH095_PORT_DIR}/port/compat/win32_compat.cpp
     ${TH095_PORT_DIR}/port/compat/d3d8_compat.cpp
-    ${TH095_PORT_DIR}/port/compat/d3dx8_compat.cpp)
+    ${TH095_PORT_DIR}/port/compat/d3dx8_compat.cpp
+    # Upstream declares but does not define ~230 production symbols (the
+    # VC7.1 link is documented as "failing closed"); these TUs close the gap.
+    ${TH095_PORT_DIR}/port/compat/th095_missing.cpp
+    ${TH095_PORT_DIR}/port/compat/th095_missing_globals.cpp)
 
 if(NINTENDO_SWITCH)
     list(APPEND TH095_COMPAT_SOURCES ${TH095_PORT_DIR}/port/runtime/switch_runtime.cpp)
