@@ -95,20 +95,20 @@ if(NINTENDO_SWITCH)
     endif()
 else()
     find_package(OpenGL REQUIRED)
-    find_package(SDL2 REQUIRED)
-    find_package(SDL2_ttf REQUIRED)
-    find_package(SDL2_image REQUIRED)
+    # pkg-config: distro SDL2(-ttf/-image) packages do not ship CMake config
+    # files, but they all ship .pc files.
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2_REQ REQUIRED SDL2 SDL2_ttf SDL2_image)
     find_library(FONTCONFIG_LIBRARY fontconfig)
     find_library(PTHREAD_LIBRARY pthread)
 
     target_link_libraries(th095-port PRIVATE
-        SDL2::SDL2
-        SDL2::SDL2_ttf
-        SDL2::SDL2_image
+        ${SDL2_REQ_LIBRARIES}
         ${OPENGL_LIBRARIES}
         ${FONTCONFIG_LIBRARY}
         ${PTHREAD_LIBRARY}
         m
         dl)
+    target_include_directories(th095-port PRIVATE ${SDL2_REQ_INCLUDE_DIRS})
     set_target_properties(th095-port PROPERTIES OUTPUT_NAME "th095-host")
 endif()
