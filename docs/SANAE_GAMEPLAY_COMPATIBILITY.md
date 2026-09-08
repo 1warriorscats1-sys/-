@@ -246,7 +246,7 @@ child-target precedence, exactly-once notification, both creation orders,
 movement/destruction in the first handler, a new lower-index instance after its
 partner's bucket, solid contacts, one-sided handlers and misses. A negative
 control without the ordering repair failed the contact-order assertion.
-The local Python suite remains 52 tests (41 passed, 11 skipped); native combat,
+Host probe runs 7–16 (patched engine + original data.win) are summarized in `docs/SANAE_AUDIT_2026-09-08-probes.md`: boss-body contact is absent over hundreds of clean overlap frames, and a directly spawned shield guard holds 40/40 durability in the real fight.\n\nThe local Python suite remains 52 tests (41 passed, 11 skipped); native combat,
 window/save/restart/draw tests and sanitized audio tests pass. These are host
 checks, not confirmation on physical Switch hardware or a full playthrough.
 
