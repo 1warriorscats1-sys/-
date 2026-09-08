@@ -61,6 +61,16 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
         if (runner->currentIni != nullptr) return RValue_makeUndefined();
     }''')
 
+    # SANAE's equal-depth GUI instances are created back-to-front. The pinned
+    # runner sorts their IDs descending, so opaque frame backgrounds cover the
+    # portrait and HP fill. Keep depth/type and non-instance ordering unchanged.
+    replace('src/runner.c',
+            '    if (a->type == DRAWABLE_TILE)\n'
+            '        return (a->order > b->order) - (a->order < b->order); // tiles: higher index later',
+            '    if (a->type == DRAWABLE_TILE || a->type == DRAWABLE_INSTANCE)\n'
+            '        return (a->order > b->order) - (a->order < b->order); // instances: newer IDs draw on top')
+    replace('src/runner.c', '// instance/layer: higher first',
+            '// layers/particle systems: higher first')
     replace('src/runner.h', '#define OTHER_GAME_START     2', '#define OTHER_GAME_START     2\n#define OTHER_GAME_END       3')
     replace('src/runner.h', '    bool shouldExit;', '    bool shouldExit;\n    bool sanaeSaveFailed;')
     # game_restart destroys the game's controller DS lists, not the physical pads.

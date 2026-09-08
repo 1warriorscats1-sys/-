@@ -37,6 +37,12 @@ def main():
         link.append(str(output))
         subprocess.run(link, cwd=build, check=True)
         subprocess.run([str(Path(work)/'test')], cwd=work, check=True)
+        # Exercise the real static sorting functions from patched runner.c.
+        draw_test = Path(work)/'draw-order'
+        subprocess.run([*flags, '-ffunction-sections', '-fdata-sections',
+                        str(ROOT/'tests/native/sanae_draw_order.c'),
+                        '-Wl,--gc-sections', '-lm', '-o', str(draw_test)], cwd=build, check=True)
+        subprocess.run([str(draw_test)], cwd=work, check=True)
         audio_sanitizers = ['-fsanitize=address,undefined', '-fno-omit-frame-pointer'] if args.sanitize_audio else []
         subprocess.run([*flags, *audio_sanitizers, '-ffunction-sections', '-fdata-sections',
                         '-I'+str(source/'vendor/mojoal'), '-I'+str(source/'vendor/stb/vorbis'),

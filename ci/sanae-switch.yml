@@ -1,4 +1,4 @@
-# Array collisions, controller rediscovery on restart and requested cover; NACP 01.01. Reset lifecycle regression included.
+# Fix opaque HUD occlusion: equal-depth instance order; includes floor collision and restart repairs.
 name: SANAE experimental open NRO
 
 on:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Сборка и тестирование интеграции SANAE
         run: python3 scripts/build_sanae.py --target headless
-      - name: Sanitized audio crash regression
+      - name: Native draw-order and sanitized audio regressions
         run: python3 scripts/test_sanae_runner.py --sanitize-audio
 
 

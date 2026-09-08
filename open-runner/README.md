@@ -1,15 +1,14 @@
-## Current compatibility warning
+## Current compatibility status
 
-Hardware feedback after the last published build reports missing floor collision,
-black HP/ability HUD and dead controller input after pause → title. The independent
-engine is **not equivalent to the proprietary runner used by the previous NSP**.
-Do not describe it as fully playable or as just the old NSP fixes repackaged.
+The missing floor collision, controller rediscovery after pause → title, and black
+HP/ability HUD now have source repairs. The HUD defect was reproduced with the actual
+GLES renderer: opaque equal-depth frame instances covered the portrait/health fill.
+After the ordering repair, the portrait, red HP bar and floor are visible in the
+host GLES test. The player stands on the floor. No replacement game graphics are used.
 
-The latest experimental compilation includes array-target `instance_place` and controller discovery
-after `game_restart`. Host probes reproduce both failures and pass with the repairs.
-The black HUD has **not** been diagnosed or fixed. The cover converter now uses the
-owner-requested URL instead of the procedural emblem; Switch embedding passed CI.
-See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md` and `ARTWORK_NOTICE.txt`.
+These are host results, not confirmation on Switch or proof of full-game compatibility.
+See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The build below predates the HUD repair;
+new compilation results will be linked separately. Author/version remain sorehodoh/01.01.
 
 # SANAE — experimental open NRO integration
 

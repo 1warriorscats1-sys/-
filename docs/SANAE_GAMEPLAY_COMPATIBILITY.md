@@ -38,7 +38,7 @@ Using the unchanged original Steam data.win with SHA-256
 External CSV/audio are unavailable locally. No-op rendering cannot prove pixels,
 normal progression, save continuation, or later-game stability.
 
-## Open: black HP and adjacent ability portrait
+## Black HP and adjacent ability portrait — now reproduced and repaired on host
 
 The owner clarified that both HP and the adjacent ability image are black. This
 is not a request for a replacement UI graphic. Inspect the shared rendering path.
@@ -47,7 +47,7 @@ The original draw-GUI events call draw_self, select actual sprites, and at frame
 600 the portrait has white blend, alpha 1, scale 1 and valid frame/position. The
 original TXTR decoder successfully produces colored portrait pixels from page 6
 and floor pixels from page 7. Neither evidence proves the Switch GL upload or
-render state is correct. No speculative HUD patch has been applied.
+render state is correct. The subsequent GLES reproduction below identifies the draw-order defect; no replacement graphics are used.
 
 Floor sprites are 1,070 room asset-layer sprites, not a missing tilemap. Falling
 out of the camera is a possible contributor to the visual floor report; collision
@@ -77,7 +77,7 @@ Source: `926902987ab7c52b02655c37b50308f583c1dc73`.
 CI: https://github.com/1warriorscats1-sys/-/actions/runs/34230377990 (success).
 Experimental artifact: https://github.com/1warriorscats1-sys/-/actions/runs/34230377990/artifacts/10057572517
 (18,712,918 bytes). It includes the NRO package, corresponding source, BUILD.json
-and ELF symbol sidecar. The black HP/ability HUD remains unresolved; this is not
+and ELF symbol sidecar. That build predates the HUD repair below and is not
 advertised as the requested fully compatible replacement for the working NSP.
 
 ## Scope correction: “the same fixes as the NSP”
@@ -102,7 +102,55 @@ The following must not be conflated:
 
 No supported one-shot transplant of the old binary patches into this engine has
 been found. Do not patch HUD pixels, inject replacement portraits, or advertise
-another compilation as meeting the requested equivalence. The black HUD still
-requires renderer-level evidence; valid decoded source pixels alone are not that
-evidence. Full acceptance also requires gameplay progression, abilities, save/load,
+another compilation as meeting the requested equivalence. The GLES reproduction below supplies renderer-level evidence for this HUD defect;
+valid decoded source pixels alone would not have been enough. Full acceptance also requires gameplay progression, abilities, save/load,
 restart/controller reconnection and clean exit on Switch, not only room entry.
+
+## GLES pixel reproduction and HUD repair
+
+A private Linux pbuffer test now runs the **actual modern GL renderer with a GLES
+context**, using ANGLE/SwiftShader libraries from `@sparticuz/chromium` 149.0.0.
+It uses the unchanged original data hash above, no-op audio, a fixed 1280×720
+pbuffer/window and the same window-setter policy as Switch. No game/runtime or
+third-party graphics binaries are added to the public tree. The diagnostic EGL
+backend is not part of the Switch build. This is software GLES, **not Switch GPU
+or controller hardware validation**.
+
+The old comparator sorts equal-depth instances by descending instance ID.
+SANAE creates its HUD back-to-front: frame 101389, portrait 101390, HP frame 101391,
+HP fill 101392. All are depth zero. Consequently the opaque black frame interiors
+are drawn over the already drawn portrait and red health bar. The source textures
+and GL upload are not the cause of this reproduced black HUD.
+
+The overlay changes **only the equal-depth instance tie** to ascending ID. Depth
+precedence, drawable-type precedence, tile order, layer ties and particle-system
+ties are retained. This is not a sprite replacement, hidden floor, color override,
+or HUD-object-specific depth hack. It applies to the shared draw sorting path.
+
+At original-data playback frame 600:
+
+| Measurement | Before HUD repair | After HUD repair |
+|---|---:|---:|
+| Red HP pixels in rectangle (230,672)–(510,700) | 0 | 7,840 |
+| Non-black portrait pixels in rectangle (60,580)–(180,690) | 0 | 12,140 |
+| Player position / grounded | (114,174.40004), true | same |
+
+The world crop (0,0)–(1280,490) is pixel-identical across these two runs. The floor
+is visible with the array-collision repair, and the player remains on it.
+Private full-frame PNG SHA-256:
+
+* Before: `efeb2e003c8900b0fba2ded4cc8fa2f7e90244cfa3071b4245cae73bd10c4ea1`
+* After: `e3678e8351fd9cb3b9ef6a2c6cce876803e3fd055e6f47ae92005f82df6c2e5d`
+
+GLES screenshots also checked pause (550), title confirmation (650), restarted
+title (800), and settings after keyboard navigation (1000). Portraits, text and
+menus are visible; this does not establish later-level correctness or real audio.
+
+`tests/native/sanae_draw_order.c` compiles the **actual patched runner.c comparator
+and sorted-cache check** against synthetic instances. It verifies back-to-front
+GUI ties, depth priority including extreme depths, and retained tile/layer/particle
+ordering. The same fixture fails with the previous comparator (negative control).
+The integrated tests pass; Python suite: 51 total, 40 passed, 11 skipped locally.
+The OpenAL harness passes ASan/UBSan; full GL/VM sanitizer cleanliness is not claimed.
+
+New Switch compilation and hardware verification must be reported separately.
