@@ -8,7 +8,7 @@ on:
         required: true
         type: string
   push:
-    branches: [arena/01a080a0-repo]
+    branches: [arena/01a080a0-repo, arena/01a08223-repo]
     paths: [.github/workflows/sanae-private-probe.yml]
 permissions:
   contents: read
@@ -16,7 +16,7 @@ permissions:
 jobs:
   investigate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
