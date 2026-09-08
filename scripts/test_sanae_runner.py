@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--sanitize-audio', action='store_true')
     parser.add_argument('--build', type=Path, default=ROOT/'.cache/sanae-build-headless')
     args = parser.parse_args()
     build = args.build.resolve()
@@ -36,9 +37,10 @@ def main():
         link.append(str(output))
         subprocess.run(link, cwd=build, check=True)
         subprocess.run([str(Path(work)/'test')], cwd=work, check=True)
-        subprocess.run([*flags, '-ffunction-sections', '-fdata-sections',
+        audio_sanitizers = ['-fsanitize=address,undefined', '-fno-omit-frame-pointer'] if args.sanitize_audio else []
+        subprocess.run([*flags, *audio_sanitizers, '-ffunction-sections', '-fdata-sections',
                         '-I'+str(source/'vendor/mojoal'), '-I'+str(source/'vendor/stb/vorbis'),
-                        str(ROOT/'tests/native/sanae_audio.c'), '-Wl,--gc-sections', '-lm',
+                        str(ROOT/'tests/native/sanae_audio.c'), str(build/'CMakeFiles/butterscotch.dir/src/stb_ds.c.o'), '-Wl,--gc-sections', '-lm',
                         '-o', str(Path(work)/'audio')], cwd=build, check=True)
         subprocess.run([str(Path(work)/'audio')], cwd=work, check=True)
     subprocess.run([*flags, '-fsyntax-only', '-I'+str(source/'vendor/mojoal'),

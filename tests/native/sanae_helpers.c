@@ -25,6 +25,7 @@ static int test_close(FILE *f) { int r = fclose(f); return fail_close ? -1 : r; 
 #include "sanae_save.h"
 #include "sanae_csv.h"
 #include "sanae_audio_gain.h"
+#include "sanae_frame_policy.h"
 #undef malloc
 #undef rename
 #undef fsync
@@ -104,4 +105,10 @@ static void gains(void) {
     sanae_gain_set(&gain, .5f, 0); assert(gain.current == .5f);
     puts("audio envelope: immediate gain, interrupted fade, completion and clamping passed");
 }
-int main(void) { saves(); csvs(); gains(); return 0; }
+int main(void) {
+    assert(sanae_should_present(0, -1));
+    assert(!sanae_should_present(1, -1));
+    assert(!sanae_should_present(0, 0));
+    assert(!sanae_should_present(1, 0));
+    saves(); csvs(); gains(); return 0;
+}

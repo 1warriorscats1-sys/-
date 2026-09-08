@@ -2,6 +2,7 @@
 
 The MIT license below applies **only** to these original additions:
 
+- scripts/create_sanae_icon.py, scripts/verify_sanae_nro.py, tests/test_sanae_icon.py
 - scripts/build_sanae.py, scripts/apply_sanae_overlay.py, scripts/test_sanae_runner.py
 - open-runner/sanae original integration code and installation instructions
 - tests/native, tests/test_sanae_native.py, ci/sanae-switch.yml

@@ -55,6 +55,12 @@ def main():
     shutil.copytree(src, stage, ignore=shutil.ignore_patterns('.git', '__pycache__', 'build', '*.win', '*.dat'))
     marker.write_text(PIN['revision'])
     apply(stage)
+    if args.target == 'switch':
+        from create_sanae_icon import create_icon
+        try:
+            create_icon(stage/'sanae-icon.jpg')
+        except ImportError as error:
+            raise RuntimeError('Switch icon generation requires Pillow (python3-pil).') from error
     print(f'Prepared SANAE-specific source: {stage}', flush=True)
     if args.prepare_only:
         return
@@ -70,6 +76,11 @@ def main():
     binary = build/('butterscotch.nro' if args.target == 'switch' else 'butterscotch')
     if not binary.is_file():
         raise RuntimeError(f'Missing build output: {binary}')
+    asset_report = None
+    if args.target == 'switch':
+        from verify_sanae_nro import verify
+        asset_report = verify(binary)
+        print('Verified embedded NRO assets:', json.dumps(asset_report), flush=True)
     if args.target == 'headless':
         run([sys.executable, ROOT/'scripts/test_sanae_runner.py', '--build', build])
     output = ROOT/'dist/sanae'/args.target
@@ -78,7 +89,7 @@ def main():
     shutil.copy2(binary, named)
     manifest = {'game': "SANAE's Sylphid Breeze", 'status': 'experimental; not hardware-verified',
                 'engine': PIN, 'target': args.target, 'cmake_options': options,
-                'display_version': '01.01', 'game_author': 'sorehodoh',
+                'display_version': '01.01', 'game_author': 'sorehodoh', 'verified_nro_assets': asset_report,
                 'sha256': hashlib.sha256(named.read_bytes()).hexdigest(),
                 'save_directory': 'sdmc:/switch/sanae/saves', 'game_data_included': False}
     (output/'BUILD.json').write_text(json.dumps(manifest, indent=2)+'\n')
@@ -87,7 +98,7 @@ def main():
         archive.add(stage, arcname='engine')
         for relative in ['LICENSE.md', 'open-runner', 'scripts/build_sanae.py',
                          'scripts/build_open_runner.py', 'scripts/apply_sanae_overlay.py',
-                         'scripts/test_sanae_runner.py', 'tests/native', 'tests/test_sanae_native.py']:
+                         'scripts/test_sanae_runner.py', 'scripts/create_sanae_icon.py', 'scripts/verify_sanae_nro.py', 'tests/native', 'tests/test_sanae_native.py', 'tests/test_sanae_icon.py']:
             archive.add(ROOT/relative, arcname='integration/'+relative)
         archive.add(output/'BUILD.json', arcname='BUILD.json')
     if args.target == 'switch':

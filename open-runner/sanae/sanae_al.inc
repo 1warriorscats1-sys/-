@@ -54,3 +54,10 @@ static bool sanae_al_get_loop(AudioSystem *audio, int32_t sound) {
     }
     return false;
 }
+/* Release buffered-source allocations when decoding/uploading fails before play. */
+static void sanae_al_discard_pending(SoundInstance *slot) {
+    if (slot->alSource) alDeleteSources(1, &slot->alSource);
+    if (slot->alBuffer) alDeleteBuffers(1, &slot->alBuffer);
+    slot->alSource = slot->alBuffer = 0;
+    slot->active = false;
+}

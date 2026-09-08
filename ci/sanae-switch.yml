@@ -14,10 +14,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install original-icon test dependency
+        run: sudo apt-get update && sudo apt-get install -y python3-pil
+
       - name: Public tests, including native failure injection
         run: SANAE_SANITIZE=1 python3 -m unittest discover -s tests -v
       - name: Build and test SANAE integration without private game files
         run: python3 scripts/build_sanae.py --target headless
+      - name: Sanitized audio crash regression
+        run: python3 scripts/test_sanae_runner.py --sanitize-audio
+
   switch:
     needs: host-tests
     runs-on: ubuntu-24.04
@@ -26,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install build orchestration tools
-        run: apt-get update && apt-get install -y --no-install-recommends python3 git cmake make
+        run: apt-get update && apt-get install -y --no-install-recommends python3 python3-pil git cmake make
       - name: Build SANAE NRO and exact corresponding source
         run: python3 scripts/build_sanae.py --target switch
       - uses: actions/upload-artifact@v4

@@ -185,3 +185,55 @@ static void cleanupState(Runner* runner) {
     AlAudioSystemVtable.sanaeSetLoop = sanae_al_set_loop;
     AlAudioSystemVtable.sanaeGetLoop = sanae_al_get_loop;
     AlAudioSystemVtable.init = maInit;''')
+
+    # Hardware crash +0xbe908: audio group 11 was looked up in an append-order array.
+    replace(audio, '#include "sanae_al.inc"', '#include "sanae_al_groups.inc"\n#include "sanae_al.inc"')
+    replace(audio, '    arrput(ma->base.audioGroups, dataWin);', '    sanae_al_init_groups(audio, dataWin);')
+    p = source / audio
+    text = p.read_text()
+    start = text.index('static void maGroupLoad(AudioSystem* audio, int32_t groupIndex) {')
+    end = text.index('// ===[ Audio Streams ]===', start)
+    text = text[:start] + text[end:]
+    text = text.replace('DataWin* dw = ma->base.audioGroups[0];', 'DataWin* dw = ma->base.dw;')
+    text = text.replace('if (0 > soundIndex || (uint32_t) soundIndex >= dw->sond.count)',
+                        'if (!dw || 0 > soundIndex || (uint32_t) soundIndex >= dw->sond.count)')
+    text = text.replace('if (0 > sound->audioFile || (uint32_t) sound->audioFile >= ma->base.audioGroups[sound->audioGroup]->audo.count)',
+                        'if (!sanae_al_group(audio, sound->audioGroup) || 0 > sound->audioFile || (uint32_t) sound->audioFile >= sanae_al_group(audio, sound->audioGroup)->audo.count)')
+    # Validate before allocating AL objects, including unloaded/nonexistent groups.
+    text = text.replace('        alGenSources(1, &slot->alSource);\n        alGenBuffers(1, &slot->alBuffer);', '        bool needsGroup = (sound->flags & AUDIO_ENTRY_FLAG_REGULAR) != AUDIO_ENTRY_FLAG_REGULAR ||\n            (sound->flags & (AUDIO_ENTRY_FLAG_IS_EMBEDDED | AUDIO_ENTRY_FLAG_IS_COMPRESSED)) != 0;\n        DataWin *group = sanae_al_group(audio, sound->audioGroup);\n        if (needsGroup && (!group || sound->audioFile < 0 || (uint32_t)sound->audioFile >= group->audo.count)) {\n            logWarn("SANAE: refusing sound %d: group %d unloaded/invalid or audio entry %d missing\\n", soundIndex, sound->audioGroup, sound->audioFile);\n            return -1;\n        }\n        alGenSources(1, &slot->alSource);\n        alGenBuffers(1, &slot->alBuffer);')
+    p.write_text(text)
+
+    # game_end during Step must not draw a frame without the game's Draw/GUI fade.
+    replace('src/loop.c', '#include "loop.h"', '#include "loop.h"\n#include "sanae_frame_policy.h"')
+    replace('src/loop.c', '                Runner_step(runner);', '                Runner_step(runner);\n                if (runner->shouldExit) {\n                    actuallyShuttingDown = true;\n                    break; /* Keep the last fully presented frame, not a partial menu. */\n                }')
+    replace('src/loop.c', '                if (runner->pendingRoom == -1)\n                    platformSwapBuffers();',
+            '                if (sanae_should_present(runner->shouldExit, runner->pendingRoom))\n                    platformSwapBuffers();')
+    replace('src/loop.c', '                Runner_handlePendingRoomChange(runner);',
+            '                if (!runner->shouldExit) Runner_handlePendingRoomChange(runner);')
+    # The entry point redirects stderr; upstream printed all diagnostics to stdout.
+    replace('src/switch/log.c', '    printf("%s%s%s", colourPrefix, buffer, ANSI_COLOUR_CODE_RESET);',
+            '    (void)colourPrefix;\n    fputs(buffer, stderr);\n    fflush(stderr);')
+
+    replace(audio, '    slot->streaming = false;\n    slot->vorbis = nullptr;', '    slot->loop = loop;\n    slot->streaming = false;\n    slot->vorbis = nullptr;')
+
+    replace('CMakeLists.txt', 'nx_create_nro(butterscotch NACP Butterscotch.nacp)',
+            'nx_create_nro(butterscotch NACP Butterscotch.nacp ICON "${CMAKE_CURRENT_SOURCE_DIR}/sanae-icon.jpg")')
+
+    replace(audio, '    slot->loop = loop;\n    slot->streaming = false;',
+            '    slot->alSource = slot->alBuffer = 0;\n    slot->loop = loop;\n    slot->streaming = false;')
+    replace(audio, '        alGenSources(1, &slot->alSource);\n        alGenBuffers(1, &slot->alBuffer);', '''        if (needsGroup) {
+            DataWin_loadAudoIfNeeded(group, (uint32_t)sound->audioFile);
+            AudioEntry *entry = &group->audo.entries[sound->audioFile];
+            if (!entry->present || !entry->data || !entry->dataSize) {
+                logWarn("SANAE: missing audio payload for sound %d in group %d\\n", soundIndex, sound->audioGroup);
+                return -1;
+            }
+        }
+        alGenSources(1, &slot->alSource);
+        alGenBuffers(1, &slot->alBuffer);''')
+    p = source / audio
+    text = p.read_text()
+    start = text.index('        bool needsGroup =')
+    end = text.index('    // Apply properties', start)
+    body = text[start:end].replace('return -1;', 'sanae_al_discard_pending(slot); return -1;')
+    p.write_text(text[:start] + body + text[end:])

@@ -29,26 +29,22 @@ controls and updates metadata; it does **not** claim to fix the new-game crash, 
 icon or exit-transition flash. Only replace `switch/sanae/sanae.nro`; preserve game data
 and saves. `sanae-symbols.zip` is for debugging, not SD installation.
 
-## Hardware feedback and follow-up
+## Hardware feedback and current repairs
 
-The user tested the first NRO: **Nintendo Bluetooth Pro Controller works and the exit
-returns**, but a brief unwanted frame appears during the exit transition. Starting a new
-game crashes before gameplay. A save file exists afterward, which does **not** establish
-correct progress persistence. Reported module ID:
-`8562093015BBCBCD089A6523D7FFC5862E637B8F000000000000000000000000`;
-PC `+0xbe908`, LR `+0xbe8c8`, Data Abort. Root cause is not yet symbolicated or fixed.
-The first artifact did not retain its ELF; future builds package the exact ELF separately
-in `sanae-symbols.zip` with line information. These new symbols cannot be used as though
-they matched the old build's offsets.
+The user confirmed **Nintendo Bluetooth Pro Controller works and exit returns to hbmenu**
+in the first build, but new game crashed and an unwanted background frame appeared during
+exit. A save file after crashing is not proof that gameplay saves are correct.
 
-Follow-up: Switch window size/rectangle/position/fullscreen/region-size/centering calls
-are no-ops. Physical size getters remain intact and fullscreen reports true. Surface and
-GUI sizing remain untouched. A host regression test verifies the same registration policy
-blocks backend resize calls. This is **not yet a hardware-verified flicker fix**, nor a fix
-for the new-game crash or the exit transition. Menu labels/settings may still change in
-game logic; the runtime ignores the window manipulation itself.
-NACP version is now `01.01`, author credit `sorehodoh` (original game developer).
-The missing icon remains outstanding.
+The original crash has now been symbolicated against a rebuilt NRO with the **exact same
+module ID**. Cause: append-order audio group storage was incorrectly indexed by game group
+IDs. Indexed group storage, validation and an out-of-order playback regression are now
+implemented. Exit presentation also stops before a partial frame after `game_end`.
+
+An original generated icon is now embedded; the builder verifies the actual NRO icon,
+NACP author `sorehodoh` and version `01.01`. The prior window-control lock remains.
+Switch diagnostics now reach `sanae.log`; each new binary ships its exact ELF separately.
+See [diagnostic evidence, repairs and test limits](../docs/SANAE_CRASH_DIAGNOSIS.md).
+These repairs need retesting on Switch; they are not a claim of a bug-free full game.
 
 ## SANAE-specific changes
 
@@ -76,7 +72,8 @@ The missing icon remains outstanding.
   nothing on this non-Steam port. Switch desktop-window positioning is a no-op.
 
 The existing libnx input backend uses `NpadStandard`, the default handheld/player-one pad
-and eight player slots. **Bluetooth Pro and Joy-Con behavior remains unverified on hardware.**
+and eight player slots. **The user confirmed Bluetooth Pro on the first NRO; no input
+implementation was changed in these repairs. Joy-Con still needs an open-runner device test.**
 The legacy controller IPS draft is unrelated and is not applied to this engine.
 
 ### Save and exit limits
@@ -152,7 +149,7 @@ checks every source-edit anchor, applies SANAE integration and builds/tests it. 
 modifies that upstream checkout or downloads game files. `--source` can select an already
 cached clean checkout. `--cmake` selects a CMake executable.
 
-For Switch, install devkitPro/devkitA64/libnx, Switch CMake tooling and the upstream
+For Switch, install devkitPro/devkitA64/libnx, Switch CMake tooling, Pillow (`python3-pil`) for icon generation/verification, and the upstream
 SDL2/Mesa/OpenAL portlibs, set `DEVKITPRO`, then:
 
 ```sh
