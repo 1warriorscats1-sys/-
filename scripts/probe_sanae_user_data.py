@@ -204,8 +204,8 @@ HOOK = r'''
                     guardHp, guardStarHits, guardOverlapNames[0] ? guardOverlapNames : "-");
             }
             if (playerDrop || guardDrop) {
-                logInfo("SANAE_DROP frame=%d hp=%g dhp=%g guard=%g dghp=%g over=%d touch=%d bullets=%d ov=%s gov=%s\n",
-                    frame, playerHp, lastHp - playerHp, guardHp, lastGuardHp - guardHp,
+                logInfo("SANAE_DROP frame=%d hp=%g dhp=%g bhp=%g guard=%g dghp=%g over=%d touch=%d bullets=%d ov=%s gov=%s\n",
+                    frame, playerHp, lastHp - playerHp, bossHp, guardHp, lastGuardHp - guardHp,
                     overBoss, touchBoss, bulletCount, overlapNames[0] ? overlapNames : "-",
                     guardOverlapNames[0] ? guardOverlapNames : "-");
             }
@@ -338,7 +338,7 @@ def summarize(path):
               'ability': state.get('globalVariables', {}).get('set_spell'), 'actors': []}
     for instance in state.get('instances', []):
         name = instance['objectName']
-        if name not in ('obj_P01_KOCHIYASanae', 'obj_p01s02e02_gurad') and 'Marisa' not in name:
+        if name not in ('obj_P01_KOCHIYASanae', 'obj_p01s02e02_gurad') and 'Marisa' not in name and 'Kogasa' not in name:
             continue
         variables = instance.get('selfVariables', {})
         actor = {'object': name, 'x': round(instance['x']), 'y': round(instance['y'])}
@@ -372,7 +372,7 @@ def merge_snapshots(snaps, cap=6):
                  'frames': keep}
         merged.append(entry)
     merged.sort(key=lambda m: m['frames'][0])
-    return merged[:cap]
+    return merged[:min(cap, 3)]
 
 
 def tail(lines, count=22, width=240):
@@ -415,6 +415,7 @@ def parse_audit(log):
     drops = []
     boss_vars = []
     guard_vars = []
+    names = ''
     for line in log.splitlines():
         if line.startswith('SANAE_AUDIT'):
             events.append(fields_of(line, 'SANAE_AUDIT'))
@@ -426,8 +427,10 @@ def parse_audit(log):
         elif line.startswith('SANAE_GUARDVAR'):
             f = fields_of(line, 'SANAE_GUARDVAR')
             guard_vars.append('%s=%s' % (f.get('name'), f.get('v')))
+        elif line.startswith('SANAE_NAMES'):
+            names = line[len('SANAE_NAMES '):].strip()[:200]
     if not events:
-        return {'events': 0, 'boss_vars': boss_vars, 'guard_vars': guard_vars}
+        return {'events': 0, 'boss_vars': boss_vars, 'guard_vars': guard_vars, 'names': names}
     over_frames = [e for e in events if e.get('over') == '1']
     contact_frames = [e for e in over_frames if e.get('bullets') == '0']
     touch_only_frames = [e for e in events if e.get('over') == '0' and e.get('touch') == '1' and e.get('bullets') == '0']
@@ -457,11 +460,11 @@ def parse_audit(log):
         if value >= 0:
             first_boss = value
             break
-    if len(events) <= 24:
+    if len(events) <= 12:
         sample = events
     else:
-        sample = events[:10] + events[len(events) // 2:len(events) // 2 + 6] + events[-8:]
-    drop_sample = drops[:24]
+        sample = events[:4] + events[len(events) // 2:len(events) // 2 + 4] + events[-4:]
+    drop_sample = drops[:10]
     return {
         'events': len(events),
         'overlap_boss_frames': len(over_frames),
@@ -475,10 +478,12 @@ def parse_audit(log):
         'guard_first_frame': guard_first,
         'guard_hp_min_seen': guard_hp_min,
         'first_boss_frame': first_boss,
+        'names': names,
         'boss_vars': boss_vars,
         'guard_vars': guard_vars,
-        'drop_details': [{k: d.get(k, '') for k in ('frame', 'hp', 'dhp', 'guard', 'dghp', 'over', 'touch', 'bullets', 'ov', 'gov')} for d in drop_sample],
-        'sample': [{k: e.get(k, '') for k in ('frame', 'room', 'hp', 'boss', 'bhp', 'over', 'touch', 'bullets', 'guard', 'guardstar')} for e in sample],
+        'drop_details': [{**{k: d.get(k, '') for k in ('frame', 'hp', 'dhp', 'bhp', 'guard', 'dghp', 'over', 'touch', 'bullets')},
+                           'ov': (d.get('ov') or '')[:80], 'gov': (d.get('gov') or '')[:80]} for d in drop_sample],
+        'sample': [{k: e.get(k, '') for k in ('frame', 'room', 'hp', 'over', 'touch', 'bullets', 'guard', 'guardstar')} for e in sample],
     }
 
 
@@ -513,11 +518,12 @@ def main():
                      ('obj_b02_KIRISAMEMarisa', {'SANAE_PROBE_CHASE': '1',
                                                  'SANAE_PROBE_CHASE_START': '850',
                                                  'SANAE_PROBE_CHASE_END': '1650'}),
-                     ('room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1'}),
-                     ('room_' + marisa_rooms[1], {'SANAE_PROBE_CHASE': '1'}),
+                     ('room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1',
+                                                  'SANAE_PROBE_CHASE_END': '7900'}),
                      ('umbrella', {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_FEED': '1'}),
                      ('umbrella_room_' + marisa_rooms[0],
-                      {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_CHASE': '1'})]
+                      {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_GUARDSPAWN': '1',
+                       'SANAE_PROBE_CHASE': '1', 'SANAE_PROBE_CHASE_END': '7900'})]
         for index, (scenario, probe_env) in enumerate(scenarios):
             case = work / str(index)
             case.mkdir(exist_ok=True)
@@ -539,31 +545,34 @@ def main():
                 start_keys(inputs, edge)
             elif scenario.startswith('room_'):
                 # pendingRoom at >=600; Z taps dismiss the boss intro dialog
-                # (run 11 showed the room but stayed in game=dialog all run),
-                # chase then parks Sanae on Marisa.
+                # and fire shots; chase parks Sanae on Marisa for ~6400 frames
+                # so several boss phases (incl. any melee/dash moves) occur.
                 start_keys(inputs, edge)
-                end = 4800
-                frames = [1100, 1500, 2000, 3200, 4600]
-                z_taps(45, 660, 4750)
+                end = 8000
+                frames = [1100, 1800, 2800, 4200, 6200, 7900]
+                z_taps(30, 660, 7950)
             elif scenario == 'umbrella':
-                # Ability capture: pickup spawns in front of Sanae at 620, she
-                # walks right into it (700-920), raises the shield with X from
-                # 1000; stars are hand-fed into it from 1300 (durability test).
+                # Tutorial: obj_ES02_TATARAKogasa overlaps Sanae's spawn and
+                # contact-damages her (16 HP per tick, run 12). Fight her with
+                # Z (fire) from 700 and watch whether she drops the umbrella
+                # ability or a guard appears; stars are hand-fed if a guard
+                # shows up (durability/break test).
                 start_keys(inputs, edge)
                 end = 2600
-                frames = [800, 1100, 1300, 1600, 2000, 2500]
-                edge(700, 39, 220)   # walk right into the pickup
-                edge(1000, 88, 900)  # hold X: raise / keep the umbrella shield
+                frames = [750, 900, 1300, 1600, 2000, 2500]
+                edge(700, 90, 1850)  # fire at Kogasa through the whole run
+                z_taps(120, 1150, 2550)  # accept any dialog that appears
             elif scenario.startswith('umbrella_room_'):
-                # Same capture in the tutorial, then enter the real Marisa room
-                # at 1200; Z taps dismiss the fight dialog; chase drags guard
-                # and Sanae into the boss bullet pattern.
+                # Fight Kogasa (Z) as in umbrella, enter the real Marisa room
+                # at 1400, dismiss its dialog, chase drags guard+Sanae into the
+                # boss pattern through many phases. Direct guard spawn remains
+                # a frame-1300 fallback if capture produced none.
                 start_keys(inputs, edge)
-                end = 4800
-                frames = [900, 1300, 1600, 2400, 3400, 4600]
-                edge(700, 39, 220)
-                edge(1000, 88, 3300)  # hold X through the whole fight
-                z_taps(45, 1260, 4700)
+                end = 8000
+                frames = [1000, 1500, 2000, 3000, 4500, 6200, 7900]
+                edge(700, 90, 1000)      # fire at Kogasa 700-1700
+                z_taps(30, 900, 7950)    # shots/dialogs throughout
+                edge(1750, 88, 5800)     # hold X: keep the shield up in the fight
             (case / 'inputs.json').write_text(json.dumps(inputs))
             args = [str(ROOT / '.cache/sanae-build-headless/butterscotch'), str(data),
                     '--headless', '--exit-at-frame', str(end), '--playback-inputs', str(case / 'inputs.json'),
