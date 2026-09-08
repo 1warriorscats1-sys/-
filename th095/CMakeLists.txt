@@ -95,16 +95,16 @@ if(NINTENDO_SWITCH)
     endif()
 else()
     find_package(OpenGL REQUIRED)
-    find_library(SDL2_LIBRARY SDL2 REQUIRED)
-    find_library(SDL2_TTF_LIBRARY SDL2_ttf REQUIRED)
-    find_library(SDL2_IMAGE_LIBRARY SDL2_image REQUIRED)
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2_ttf REQUIRED)
+    find_package(SDL2_image REQUIRED)
     find_library(FONTCONFIG_LIBRARY fontconfig)
     find_library(PTHREAD_LIBRARY pthread)
 
     target_link_libraries(th095-port PRIVATE
-        ${SDL2_LIBRARY}
-        ${SDL2_TTF_LIBRARY}
-        ${SDL2_IMAGE_LIBRARY}
+        SDL2::SDL2
+        SDL2::SDL2_ttf
+        SDL2::SDL2_image
         ${OPENGL_LIBRARIES}
         ${FONTCONFIG_LIBRARY}
         ${PTHREAD_LIBRARY}
