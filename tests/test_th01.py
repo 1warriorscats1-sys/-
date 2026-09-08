@@ -62,7 +62,11 @@ class PackageFormatTests(unittest.TestCase):
         self.assertEqual(card["cols"], 12)
         self.assertEqual(card["orb_speed"], 20)
         self.assertEqual(len(card["cells"]), 60)
-        self.assertEqual(card["cells"][0], packer.CELL_TO_KIND["#"])
+        expected_row = [packer.CELL_TO_KIND[char]
+                        for char in self.example["stages"][0]["cells"][0]]
+        self.assertEqual(card["cells"][:12], expected_row)
+        self.assertIn(packer.CELL_TO_KIND["#"], card["cells"][:12])
+        self.assertIn(packer.CELL_TO_KIND["T"], card["cells"])
         self.assertEqual(info["stages"][2]["type"], "boss")
         self.assertEqual(info["stages"][2]["boss_hp"], 900)
         self.assertEqual(info["stages"][2]["boss_pattern"], 0)

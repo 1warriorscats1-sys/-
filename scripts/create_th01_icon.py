@@ -70,7 +70,7 @@ def create_icon(path: Path, source: str | None = None) -> dict:
     else:
         image = _placeholder()
 
-    image.save(path, "JPEG", quality=94, progressive=False, subsample=0)
+    image.save(path, "JPEG", quality=94, progressive=False, subsampling=0)
     return {"path": str(path), "size": image.size, "mode": image.mode,
             "source": "user" if source else "procedural"}
 
