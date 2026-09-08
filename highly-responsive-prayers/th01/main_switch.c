@@ -12,9 +12,12 @@
  *   sdmc:/switch/th01/th01.log       start-up diagnostics
  */
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <switch.h>
 
 #include "hrp.h"
@@ -71,6 +74,8 @@ static uint16_t hrp_read_pad(PadState *pad)
     return buttons;
 }
 
+/* dst_w/dst_h are the *requested* framebuffer size; the blit never writes past
+ * them, so a smaller-than-expected framebuffer is clipped instead of overrun. */
 static void hrp_blit_scaled(uint32_t *dst, int dst_w, int dst_h, size_t stride_pixels,
                             const uint32_t *src)
 {
@@ -161,7 +166,7 @@ int main(int argc, char **argv)
 
     while (appletMainLoop() && running) {
         uint16_t buttons = hrp_read_pad(&pad);
-        if (padGetButtonsDown(&pad) & KEY_MINUS) quit_requested = 1;
+        if (padGetButtonsDown(&pad) & HidNpadButton_Minus) quit_requested = 1;
 
         hrp_input in;
         in.held = buttons;
@@ -182,7 +187,7 @@ int main(int argc, char **argv)
                           g_game.sfx, g_game.sfx_count);
             AudioOutBuffer *released = NULL;
             u32 released_count = 0;
-            if (R_SUCCEEDED(audoutWaitPlayFinish(&released, &released_count, U64_MAX)) &&
+            if (R_SUCCEEDED(audoutWaitPlayFinish(&released, &released_count, UINT64_MAX)) &&
                 released != NULL) {
                 memcpy(released->buffer, g_pcm, HRP_AUDIO_FRAMES * 4);
                 released->data_size = HRP_AUDIO_FRAMES * 4;
@@ -203,7 +208,8 @@ int main(int argc, char **argv)
             u32 stride = 0;
             uint32_t *out = (uint32_t *)framebufferBegin(&fb, &stride);
             if (out) {
-                hrp_blit_scaled(out, fb.width, fb.height, stride / sizeof(uint32_t), g_framebuffer);
+                hrp_blit_scaled(out, HRP_SWITCH_W, HRP_SWITCH_H,
+                                stride / sizeof(uint32_t), g_framebuffer);
                 framebufferEnd(&fb);
                 hrp_frame_policy_commit(&policy, 1);
             } else {

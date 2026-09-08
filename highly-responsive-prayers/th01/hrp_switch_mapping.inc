@@ -7,6 +7,8 @@
  * repository: d-pad and the left stick move, A acts, B bombs, Plus pauses. The
  * right stick is deliberately not read.
  *
+ * Button names are libnx HidNpadButton_* values (not the 3DS KEY_* names).
+ *
  * This file is included (not compiled) so the mapping stays auditable as data.
  */
 
@@ -15,15 +17,15 @@ static const struct {
     uint64_t key;
     uint16_t button;
 } hrp_switch_key_map[] = {
-    { KEY_DLEFT,  HRP_BTN_LEFT },
-    { KEY_DRIGHT, HRP_BTN_RIGHT },
-    { KEY_A,      HRP_BTN_SHOOT },
-    { KEY_ZR,     HRP_BTN_SHOOT },
-    { KEY_B,      HRP_BTN_BOMB },
-    { KEY_ZL,     HRP_BTN_BOMB },
-    { KEY_PLUS,   HRP_BTN_PAUSE },
-    { KEY_X,      HRP_BTN_CONFIRM },
-    { KEY_Y,      HRP_BTN_CONFIRM },
+    { HidNpadButton_Left,  HRP_BTN_LEFT },
+    { HidNpadButton_Right, HRP_BTN_RIGHT },
+    { HidNpadButton_A,     HRP_BTN_SHOOT },
+    { HidNpadButton_ZR,    HRP_BTN_SHOOT },
+    { HidNpadButton_B,     HRP_BTN_BOMB },
+    { HidNpadButton_ZL,    HRP_BTN_BOMB },
+    { HidNpadButton_Plus,  HRP_BTN_PAUSE },
+    { HidNpadButton_X,     HRP_BTN_CONFIRM },
+    { HidNpadButton_Y,     HRP_BTN_CONFIRM },
 };
 
 /* Analogue stick dead zone, in libnx units (0..32767). */

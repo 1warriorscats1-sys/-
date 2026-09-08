@@ -77,6 +77,17 @@ jobs:
           mkdir -p dist/th01/switch
           python3 scripts/build_th01.py --target switch 2>&1 | tee dist/th01/switch/build.log
 
+      - name: Хвост лога сборки в сводке прогона
+        if: failure()
+        run: |
+          log=dist/th01/switch/build.log
+          if [ -f "$log" ]; then
+            escaped=$(tail -n 40 "$log" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk 'BEGIN{ORS="%0A"}{print}')
+            echo "::error ::$escaped"
+          else
+            echo "::error ::build log was not produced"
+          fi
+
       - name: Лог сборки Switch (всегда)
         if: always()
         uses: actions/upload-artifact@v4
