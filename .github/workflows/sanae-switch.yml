@@ -53,3 +53,41 @@ jobs:
             dist/sanae/switch/sanae-source.tar.gz
             dist/sanae/switch/BUILD.json
             dist/sanae/switch/sanae-symbols.zip
+
+  diagnose-first-crash:
+    name: Symbolicate reported first-build crash
+    runs-on: ubuntu-24.04
+    container:
+      image: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d9011335c3bf612165ce91c6783e91aedffcdb86
+      - name: Rebuild exact original source
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 git cmake make
+          python3 scripts/build_sanae.py --target switch
+      - name: Match build ID and symbolicate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          root = Path('.cache/sanae-build-switch')
+          nro = root / 'butterscotch.nro'
+          actual = nro.read_bytes()[0x40:0x60].hex().upper()
+          expected = '8562093015BBCBCD089A6523D7FFC5862E637B8F000000000000000000000000'
+          print('::notice title=Build ID::' + actual + ' MATCH=' + str(actual == expected))
+          elf = next(p for p in (root/'butterscotch', root/'butterscotch.elf') if p.is_file() and p.read_bytes()[:4] == b'\x7fELF')
+          prefix = '/opt/devkitpro/devkitA64/bin/aarch64-none-elf-'
+          commands = [
+              [prefix+'addr2line', '-f', '-C', '-e', str(elf), '0xbe908', '0xbe8c8', '0x96860', '0x39b94', '0x39cec', '0x3a9c0'],
+              [prefix+'objdump', '-d', '--start-address=0xbe800', '--stop-address=0xbe980', str(elf)],
+          ]
+          for i, command in enumerate(commands):
+              text = subprocess.check_output(command, text=True)
+              print(f'::notice title=Crash diagnostic {i}::' + text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          if actual != expected:
+              print('::warning::Build ID mismatch: do not treat these offsets as an exact match.')
+          PY
