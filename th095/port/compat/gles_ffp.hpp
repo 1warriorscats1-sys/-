@@ -21,6 +21,9 @@ typedef double GLdouble;
 #ifndef GLclampf
 typedef float GLclampf;
 #endif
+#ifndef GLvoid
+typedef void GLvoid;
+#endif
 
 namespace ffp
 {
@@ -67,6 +70,9 @@ void DepthMask(GLboolean flag);
 void Enable(GLenum cap);
 void Disable(GLenum cap);
 
+// ---- read buffer (desktop-only; ES always reads COLOR_ATTACHMENT0) ----
+void ReadBuffer(GLenum mode);
+
 // ---- GL_CLAMP -> GL_CLAMP_TO_EDGE ----
 void TexParameteri(GLenum target, GLenum pname, GLint param);
 
@@ -104,6 +110,7 @@ void SwitchPace();
 
 #define glClearDepth ffp::ClearDepth
 #define glDrawBuffer ffp::DrawBuffer
+#define glReadBuffer ffp::ReadBuffer
 #define glDepthMask ffp::DepthMask
 
 #define glEnable ffp::Enable

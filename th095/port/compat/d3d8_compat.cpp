@@ -64,6 +64,7 @@ struct FramebufferApi
         framebufferRenderbuffer = reinterpret_cast<FramebufferRenderbufferFunction>(&glFramebufferRenderbuffer);
         deleteRenderbuffers = reinterpret_cast<DeleteRenderbuffersFunction>(&glDeleteRenderbuffers);
         return true;
+    }
 #else
         genFramebuffers = reinterpret_cast<GenFramebuffersFunction>(
             Load("glGenFramebuffers", "glGenFramebuffersEXT"));
@@ -777,7 +778,13 @@ class LinuxDevice : public IDirect3DDevice8
 
         g_framebufferApi.genRenderbuffers(1, &renderDepthBuffer);
         g_framebufferApi.bindRenderbuffer(GL_RENDERBUFFER, renderDepthBuffer);
+#ifdef __SWITCH__
+            // ES has no DEPTH24 renderbuffer format; the window depth buffer is 16 bit.
+            g_framebufferApi.renderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+#else
         g_framebufferApi.renderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+#endif
+
 
         g_framebufferApi.genFramebuffers(1, &renderFramebuffer);
         g_framebufferApi.bindFramebuffer(GL_FRAMEBUFFER, renderFramebuffer);

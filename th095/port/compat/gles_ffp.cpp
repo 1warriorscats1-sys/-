@@ -755,6 +755,11 @@ void DrawBuffer(GLenum mode)
     }
     // GL_BACK/GL_FRONT — default framebuffer; ES has one draw buffer anyway.
 }
+// Read buffer is fixed in ES; nothing to do.
+void ReadBuffer(GLenum)
+{
+}
+
 
 void DepthMask(GLboolean flag)
 {

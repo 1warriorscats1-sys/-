@@ -1329,7 +1329,8 @@ class SwitchSoundBuffer : public IDirectSoundBuffer
             {
                 INT16 leftSample, rightSample;
                 memcpy(&leftSample, source, sizeof(leftSample));
-                if (format.nChannels > 1) memcpy(&rightSample, source + sizeof(INT16));
+                if (format.nChannels > 1)
+                    memcpy(&rightSample, source + sizeof(INT16), sizeof(rightSample));
                 else rightSample = leftSample;
                 left = leftSample; right = rightSample;
             }
