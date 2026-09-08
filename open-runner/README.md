@@ -8,7 +8,7 @@ Do not describe it as fully playable or as just the old NSP fixes repackaged.
 Pending source repairs include array-target `instance_place` and controller discovery
 after `game_restart`. Host probes reproduce both failures and pass with the repairs.
 The black HUD has **not** been diagnosed or fixed. The cover converter now uses the
-owner-requested URL instead of the procedural emblem; Switch embedding must pass CI.
+owner-requested URL instead of the procedural emblem; Switch embedding passed CI.
 See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md` and `ARTWORK_NOTICE.txt`.
 
 # SANAE — experimental open NRO integration

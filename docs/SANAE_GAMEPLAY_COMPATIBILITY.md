@@ -58,8 +58,8 @@ repair alone does not prove rendering is fixed.
 The converter uses the exact owner-requested cover URL, pads instead of cropping,
 and generates a 256×256 RGB baseline JPEG. A failed download fails the build;
 there is no silent fallback to another image. Tests use synthetic artwork and do
-not access the network. The sandbox cannot fetch the actual CDN image; CI fetch
-and NRO validation remain pending. Artwork has separate rights, see
+not access the network. The sandbox cannot fetch the actual CDN image directly; GitHub Actions successfully
+fetched it, built the NRO and passed the mandatory embedded JPEG/NACP validation. Artwork has separate rights, see
 `open-runner/ARTWORK_NOTICE.txt`.
 
 Public Python suite: 51 tests, 40 passed, 11 skipped in the local Pillow venv.
@@ -69,3 +69,13 @@ These are host checks, not a fully sanitized VM or a Switch gameplay test.
 A public synthetic runner test also executes `Runner_reset`, `beginFrame` and two
 real `Runner_step` calls: two connected pads produce exactly two async discovery
 maps on the first step and no additional discoveries on the second step.
+
+
+## Latest compilation, not a completed gameplay repair
+
+Source: `926902987ab7c52b02655c37b50308f583c1dc73`.
+CI: https://github.com/1warriorscats1-sys/-/actions/runs/34230377990 (success).
+Experimental artifact: https://github.com/1warriorscats1-sys/-/actions/runs/34230377990/artifacts/10057572517
+(18,712,918 bytes). It includes the NRO package, corresponding source, BUILD.json
+and ELF symbol sidecar. The black HP/ability HUD remains unresolved; this is not
+advertised as the requested fully compatible replacement for the working NSP.
