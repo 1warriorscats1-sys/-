@@ -11,6 +11,18 @@ Local conversion, checked SD-card layout, and source for the save/exit compatibi
 
 ---
 
+## New direction: an open NRO that reads original Steam files
+
+**[Open-runner track: Butterscotch](open-runner/README.md)** is now the preferred route for the
+public port. It already has a licensed independent engine and a Switch backend. In local
+headless tests, it loaded the supplied original SANAE `data.win` without conversion, ran the
+title room, and entered the tutorial using synthetic keyboard input. This is **not yet a
+verified playable Switch build**: CSV/audio API compatibility, graphics and device testing remain.
+See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
+
+The instructions below describe the **existing legacy proprietary-runtime toolkit**, not
+installation of a finished open NRO. Do not mix the two engines' data preparation or saves.
+
 ## What this project is — and isn't
 
 This is a **source-only compatibility toolkit**, not a standalone open-source game engine.

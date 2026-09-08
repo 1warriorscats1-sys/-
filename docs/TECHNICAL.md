@@ -1,5 +1,8 @@
 # Architecture and compatibility
 
+These notes describe the legacy patcher. The preferred public-port direction is now the
+[independent Butterscotch NRO](../open-runner/README.md), which already reads original data.
+
 ## Two separate layers
 
 1. **Data preparation (public source):** Python's standard library reads the user's PC `data.win`, invokes
@@ -46,4 +49,6 @@ Generated logs have temporary paths redacted; manifests contain filenames and ha
 - Private ARM64 tests are opt-in with `SANAE_RUNTIME_MAIN`.
 - The prior converted `game.win` was validated locally; the fixed quit path was confirmed by the user on Switch.
 - The new end-to-end wizard has not been tested against a fresh, unconverted Steam installation here.
-  Synthetic orchestration tests and validation of an already converted local file are not equivalent to that test.
+  The newly supplied original file passed convert_data + patch_steam + verify_data locally,
+  but the complete wizard with original audio/CSV assets has not been exercised.
+  Synthetic orchestration tests are not equivalent to full-game or console testing.

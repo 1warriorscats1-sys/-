@@ -19,9 +19,16 @@ supplies no acquisition instructions or protection-bypass keys. It is unofficial
 The absence of bundled assets does not by itself resolve every legal or contractual question; this is not legal advice.
 See LICENSE.md and NOTICE.md for the narrower scope of the code license.
 
+## Open-engine track
+
+The build helper may fetch the pinned AGPL-licensed Butterscotch **source**, not a closed
+GameMaker runtime. This is an allowed source dependency. An eventual open NRO release must
+include/provide corresponding source and third-party license notices.
+
 ## Existing GitHub history is NOT erased by this cleanup
 
 Earlier commits in this repository included `th08.exe`, `th10.exe` and `SANAE_exit_fix.zip` (a complete patched runner).
+The user later temporarily uploaded original `data.win` for analysis as well.
 They have been removed from the **current tree**, not magically from Git history, caches, forks, old refs or downloads.
 The session is restricted to the working branch `arena/01a080a0-repo`; other branches have not been rewritten or deleted.
 In particular the legacy `main` branch may still retain old files. Do not advertise the entire historical repository

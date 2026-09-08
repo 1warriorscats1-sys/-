@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/ButterscotchRunner/Butterscotch.git",
+  "revision": "e92a2e457925b45eb282861c22699e18397cea93",
+  "license": "AGPL-3.0",
+  "checked_on": "2026-09-08",
+  "switch_game_path": "sdmc:/switch/butterscotch/data.win",
+  "status": "upstream host smoke-test passed; SANAE Switch gameplay not verified"
+}
