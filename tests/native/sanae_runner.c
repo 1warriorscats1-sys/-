@@ -236,6 +236,9 @@ static void target_arrays(void) {
     Sprite sprite={.width=10,.height=10,.bboxMode=1,.sepMasks=2};
     GameObject objects[3]={0};
     Instance *e1, *e2, *e3, *other;
+    Renderer *renderer=NoopRenderer_create();
+    AudioSystem *audio=(AudioSystem*)NoopAudioSystem_create();
+    FileSystem *fs=NoopFileSystem_create();
     VMContext *vm;
     Runner *runner;
     RValue args[9], list, found;
@@ -249,7 +252,7 @@ static void target_arrays(void) {
     dw.objt.count=3; dw.objt.objects=objects;
     dw.sprt.count=1; dw.sprt.sprites=&sprite; dw.room.count=1; dw.room.rooms=&room;
     vm=VM_create(&dw);
-    runner=Runner_create(&dw,vm,NoopRenderer_create(),NoopFileSystem_create(),(AudioSystem*)NoopAudioSystem_create(),1);
+    runner=Runner_create(&dw,vm,renderer,fs,audio,1);
     runner->spatialGrid=SpatialGrid_create(room.width,room.height);
     runner->currentRoom=&room; runner->currentRoomIndex=0;
     e1=Runner_createInstance(runner,10,10,1);
@@ -346,6 +349,7 @@ static void target_arrays(void) {
       assert(RValue_toInt32(invoke(vm,"ds_list_find_value",get,2))==100003);
       get[1]=RValue_makeReal(2);
       assert(RValue_toInt32(invoke(vm,"ds_list_find_value",get,2))==100004); }
+    discard(args[4]);
     discard(invoke(vm,"ds_list_destroy",args+7,1));
 
     args[0]=RValue_makeReal(2);
@@ -408,6 +412,7 @@ static void target_arrays(void) {
 
     puts("Target arrays: every collision/instance wrapper merges scalar, parent, id, self/other/all and empty targets; list union dedupes and ordered results sort by distance passed.");
     Runner_free(runner); VM_free(vm);
+    renderer->vtable->destroy(renderer); audio->vtable->destroy(audio); NoopFileSystem_destroy(fs);
 }
 
 static float hb_rect[8][4];
@@ -471,34 +476,40 @@ static void healthbar_directions(void) {
 }
 
 static void overlay_builtins(void) {
-    DataWin dw={0}; Runner runner={0}; VMContext vm={0};
+    DataWin dw={0};
+    Renderer *renderer=NoopRenderer_create();
+    AudioSystem *audio=(AudioSystem*)NoopAudioSystem_create();
+    FileSystem *fs=NoopFileSystem_create();
+    VMContext *vm;
+    Runner *runner;
     RValue args[3], value, out;
     dw.gen8.wadVersion=17;
     dw.gen8.defaultWindowWidth=480; dw.gen8.defaultWindowHeight=270;
-    runner.dataWin=&dw; runner.vmContext=&vm; runner.getWindowSize=NULL;
-    vm.runner=&runner; vm.dataWin=&dw; vm.hasFixedSeed=false;
-    VMBuiltins_registerAll(&vm);
+    vm=VM_create(&dw);
+    runner=Runner_create(&dw,vm,renderer,fs,audio,1);
+    runner->getWindowSize=NULL;
+    vm->hasFixedSeed=false;
 
-    value=invoke(&vm,"display_get_width",NULL,0); assert(RValue_toReal(value)==480);
-    value=invoke(&vm,"display_get_height",NULL,0); assert(RValue_toReal(value)==270);
-    runner.getWindowSize=fixed_size;
-    value=invoke(&vm,"display_get_width",NULL,0); assert(RValue_toReal(value)==1280);
-    value=invoke(&vm,"display_get_height",NULL,0); assert(RValue_toReal(value)==720);
-    runner.getWindowSize=NULL;
+    value=invoke(vm,"display_get_width",NULL,0); assert(RValue_toReal(value)==480);
+    value=invoke(vm,"display_get_height",NULL,0); assert(RValue_toReal(value)==270);
+    runner->getWindowSize=fixed_size;
+    value=invoke(vm,"display_get_width",NULL,0); assert(RValue_toReal(value)==1280);
+    value=invoke(vm,"display_get_height",NULL,0); assert(RValue_toReal(value)==720);
+    runner->getWindowSize=NULL;
 
     args[0]=string("{\"a\":1,\"b\":[true,null],\"c\":\"x\",\"d\":1.5}");
-    value=invoke(&vm,"json_parse",args,1); discard(args[0]);
-    out=invoke(&vm,"json_stringify",&value,1);
+    value=invoke(vm,"json_parse",args,1); discard(args[0]);
+    out=invoke(vm,"json_stringify",&value,1);
     assert(strstr(out.string,"\"a\":1") && strstr(out.string,"\"b\":[true,null]") &&
            strstr(out.string,"\"c\":\"x\"") && strstr(out.string,"\"d\":1.5"));
     discard(out); discard(value);
     args[0]=string("[1,2]");
-    value=invoke(&vm,"json_parse",args,1); discard(args[0]);
-    out=invoke(&vm,"json_stringify",&value,1);
+    value=invoke(vm,"json_parse",args,1); discard(args[0]);
+    out=invoke(vm,"json_stringify",&value,1);
     assert(!strcmp(out.string,"[1,2]"));
     discard(out); discard(value);
     args[0]=string("{oops");
-    value=invoke(&vm,"json_parse",args,1); discard(args[0]);
+    value=invoke(vm,"json_parse",args,1); discard(args[0]);
     assert(value.type==RVALUE_UNDEFINED); discard(value);
     { GMLArray *inner=GMLArray_create(17,1), *outer;
       for (int i=0;i<70;i++) {
@@ -507,46 +518,47 @@ static void overlay_builtins(void) {
           inner=outer;
       }
       args[0]=RValue_makeArray(inner);
-      out=invoke(&vm,"json_stringify",args,1); /* depth cap terminates hostile input */
+      out=invoke(vm,"json_stringify",args,1); /* depth cap terminates hostile input */
       assert(out.type==RVALUE_STRING && out.string!=NULL);
       discard(out); discard(args[0]); }
 
     args[0]=RValue_makeReal(1.5);
-    value=invoke(&vm,"to_string",args,1); out=invoke(&vm,"string",args,1);
+    value=invoke(vm,"to_string",args,1); out=invoke(vm,"string",args,1);
     assert(value.type==RVALUE_STRING && !strcmp(value.string,out.string));
     discard(value); discard(out);
 
-    assert(RValue_toBool(invoke(&vm,"texturegroup_status",NULL,0)));
-    discard(invoke(&vm,"texturegroup_load",NULL,0));
-    discard(invoke(&vm,"texturegroup_unload",NULL,0));
-    discard(invoke(&vm,"texture_prefetch",NULL,0));
-    discard(invoke(&vm,"texture_flush",NULL,0));
-    discard(invoke(&vm,"sprite_prefetch",NULL,0));
-    discard(invoke(&vm,"sprite_flush",NULL,0));
-    discard(invoke(&vm,"draw_texture_flush",NULL,0));
+    assert(RValue_toBool(invoke(vm,"texturegroup_status",NULL,0)));
+    discard(invoke(vm,"texturegroup_load",NULL,0));
+    discard(invoke(vm,"texturegroup_unload",NULL,0));
+    discard(invoke(vm,"texture_prefetch",NULL,0));
+    discard(invoke(vm,"texture_flush",NULL,0));
+    discard(invoke(vm,"sprite_prefetch",NULL,0));
+    discard(invoke(vm,"sprite_flush",NULL,0));
+    discard(invoke(vm,"draw_texture_flush",NULL,0));
 
     args[0]=string("harmless"); args[1]=RValue_makeReal(0);
-    discard(invoke(&vm,"show_error",args,2)); discard(args[0]);
-    assert(!runner.shouldExit);
+    discard(invoke(vm,"show_error",args,2)); discard(args[0]);
+    assert(!runner->shouldExit);
     args[0]=string("fatal"); args[1]=RValue_makeReal(1);
-    discard(invoke(&vm,"show_error",args,2)); discard(args[0]);
-    assert(runner.shouldExit);
-    runner.shouldExit=false;
+    discard(invoke(vm,"show_error",args,2)); discard(args[0]);
+    assert(runner->shouldExit);
+    runner->shouldExit=false;
 
     args[0]=RValue_makeReal(777);
-    discard(invoke(&vm,"random_set_seed",args,1)); /* single argument must not read past it */
-    assert(RValue_toReal(invoke(&vm,"random_get_seed",NULL,0))==777);
-    discard(invoke(&vm,"randomize",NULL,0));
-    assert(RValue_toReal(invoke(&vm,"random_get_seed",NULL,0))==(GMLReal)runner.random.lastSeed);
+    discard(invoke(vm,"random_set_seed",args,1)); /* single argument must not read past it */
+    assert(RValue_toReal(invoke(vm,"random_get_seed",NULL,0))==777);
+    discard(invoke(vm,"randomize",NULL,0));
+    assert(RValue_toReal(invoke(vm,"random_get_seed",NULL,0))==(GMLReal)runner->random.lastSeed);
 
     args[0]=RValue_makeReal(0);
-    discard(invoke(&vm,"draw_enable_drawevent",args,1));
-    assert(!runner.sanaeDrawEventsEnabled);
+    discard(invoke(vm,"draw_enable_drawevent",args,1));
+    assert(!runner->sanaeDrawEventsEnabled);
     args[0]=RValue_makeReal(1);
-    discard(invoke(&vm,"draw_enable_drawevent",args,1));
-    assert(runner.sanaeDrawEventsEnabled);
+    discard(invoke(vm,"draw_enable_drawevent",args,1));
+    assert(runner->sanaeDrawEventsEnabled);
 
-    shfree(vm.builtinMap);
+    Runner_free(runner); VM_free(vm);
+    renderer->vtable->destroy(renderer); audio->vtable->destroy(audio); NoopFileSystem_destroy(fs);
     puts("Overlay builtins: display fallback, JSON roundtrip/depth cap, to_string, texture shims, show_error, random seed and drawevent flag passed.");
 }
 
