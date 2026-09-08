@@ -9,7 +9,9 @@ on:
         type: string
   push:
     branches: [arena/01a080a0-repo, arena/01a08223-repo]
-    paths: [.github/workflows/sanae-private-probe.yml]
+    paths:
+      - .github/workflows/sanae-private-probe.yml
+      - scripts/probe_sanae_user_data.py
 permissions:
   contents: read
   checks: write
