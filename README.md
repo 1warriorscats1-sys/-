@@ -17,8 +17,8 @@ Local conversion, checked SD-card layout, and source for the save/exit compatibi
 public port, using Butterscotch as its independent engine. SANAE-specific save/exit, CSV
 and audio additions are implemented and host-tested; the build recipe names the output
 `sanae.nro` and uses `sd:/switch/sanae/`. Original `data.win` is read without conversion.
-**The first experimental NRO has compiled successfully in Actions.**
-[Download the build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34224440055/artifacts/10055121900)
+**Experimental NRO 01.01 has compiled successfully in Actions (Switch window controls disabled).**
+[Download the build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34225607505/artifacts/10055608060)
 (GitHub sign-in may be required). Original CSV/audio validation, rendering and real
 Pro/Joy-Con/save/exit tests remain outstanding; this is not a hardware-verified release.
 See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).

@@ -19,6 +19,16 @@ open engine used underneath it. It reads the user's original Steam `data.win` wi
 conversion. The engine revision is pinned in `upstream.json`; our additions are in `sanae/`.
 No proprietary GameMaker/Nintendo runtime or game payload is supplied.
 
+## Latest follow-up build: 01.01
+
+[Download 01.01](https://github.com/1warriorscats1-sys/-/actions/runs/34225607505/artifacts/10055608060)
+— [successful CI run](https://github.com/1warriorscats1-sys/-/actions/runs/34225607505),
+source `388a460857a9c84521df7a210a2b75dfe3dd9dea`. Host and Switch jobs passed;
+artifact existence/non-expiry confirmed through GitHub API. This build disables window
+controls and updates metadata; it does **not** claim to fix the new-game crash, missing
+icon or exit-transition flash. Only replace `switch/sanae/sanae.nro`; preserve game data
+and saves. `sanae-symbols.zip` is for debugging, not SD installation.
+
 ## Hardware feedback and follow-up
 
 The user tested the first NRO: **Nintendo Bluetooth Pro Controller works and the exit
