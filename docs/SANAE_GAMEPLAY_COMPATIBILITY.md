@@ -154,3 +154,18 @@ The integrated tests pass; Python suite: 51 total, 40 passed, 11 skipped locally
 The OpenAL harness passes ASan/UBSan; full GL/VM sanitizer cleanliness is not claimed.
 
 New Switch compilation and hardware verification must be reported separately.
+
+## Compiled HUD/floor repair (latest)
+
+* Binary source: `0616d04cd3139383a8a3b67760cc9f6c566b242c`.
+* CI success: https://github.com/1warriorscats1-sys/-/actions/runs/34238437036
+* Artifact: https://github.com/1warriorscats1-sys/-/actions/runs/34238437036/artifacts/10060951334
+* Artifact metadata: `SANAE-experimental-switch`, 18,714,564 bytes, non-expired
+  at publication. Both host tests and the Switch build passed; the build enforces
+  embedded JPEG/NACP verification. This does not replace hardware testing.
+
+Additional actual-GLES checks: a right/jump playback moves the player to
+`(174,123.40003)`, airborne at frame 450, then `(214,174.40004)`, grounded at
+frame 600. Natural title quit calls `game_end` at frame 290, exits with status 0,
+and does not render a frame after that call. External audio/CSV, later levels,
+real controller radio behavior and full save continuation are still not established.

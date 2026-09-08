@@ -7,10 +7,28 @@ After the ordering repair, the portrait, red HP bar and floor are visible in the
 host GLES test. The player stands on the floor. No replacement game graphics are used.
 
 These are host results, not confirmation on Switch or proof of full-game compatibility.
-See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The build below predates the HUD repair;
-new compilation results will be linked separately. Author/version remain sorehodoh/01.01.
+See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The latest compilation includes the HUD repair and passed both CI jobs. Author/version remain sorehodoh/01.01.
 
 # SANAE — experimental open NRO integration
+
+## Latest floor/HUD/restart repair — SANAE 01.01
+
+**[Download the new NRO package](https://github.com/1warriorscats1-sys/-/actions/runs/34238437036/artifacts/10060951334)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34238437036)
+
+Binary source: `0616d04cd3139383a8a3b67760cc9f6c566b242c`.
+Artifact `10060951334`, 18,714,564 bytes; non-expired at publication.
+Includes NRO package, corresponding source, BUILD.json and exact ELF sidecar.
+The embedded cover and sorehodoh/01.01 NACP checks passed the Switch build.
+
+Host GLES reproduces the old black HUD and shows the repaired portrait, red HP and
+floor. Movement/jump probe lands again at `(214,174.40004)`, grounded. Pause/title
+screens and keyboard navigation were checked; natural title quit exits cleanly
+before rendering another frame. Actual Switch retest and later gameplay remain open.
+
+Replace **only** `sd:/switch/sanae/sanae.nro`; keep original assets and saves.
+This is still experimental, not a complete-game/no-bugs guarantee.
+
+## Previous audio/exit compilation (superseded)
 
 **Status (2026-09-08): repaired SANAE 01.01 compiled successfully in GitHub Actions.**
 

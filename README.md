@@ -1,6 +1,6 @@
 > **Compatibility status (2026-09-08):** floor collision and restart input have
 > source repairs; the black HP/ability HUD is now reproduced and repaired in a host
-> GLES pixel test. A new Switch build still requires a hardware retest. This is not
+> GLES pixel test. The new Switch build compiled successfully and requires a hardware retest. This is not
 > a full-game/no-bugs guarantee. See [the investigation](docs/SANAE_GAMEPLAY_COMPATIBILITY.md).
 
 # SANAE's Sylphid Breeze — Switch Port Tools
@@ -22,8 +22,8 @@ Local conversion, checked SD-card layout, and source for the save/exit compatibi
 not a demonstrated replacement for the working NSP. It uses Butterscotch as its independent engine. SANAE-specific save/exit, CSV
 and audio additions are implemented and host-tested; the build recipe names the output
 `sanae.nro` and uses `sd:/switch/sanae/`. Original `data.win` is read without conversion.
-**Repaired experimental NRO 01.01 has compiled successfully in Actions: indexed audio groups, exit-frame guard and verified embedded icon.**
-[Download the build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34226964024/artifacts/10056171118)
+**New experimental NRO 01.01 compiled successfully: array floor collisions, equal-depth HUD drawing and controller rediscovery repaired.**
+[Download the build artifact](https://github.com/1warriorscats1-sys/-/actions/runs/34238437036/artifacts/10060951334)
 (GitHub sign-in may be required). Original CSV/audio validation, rendering and real
 Pro/Joy-Con/save/exit tests remain outstanding; this is not a hardware-verified release.
 See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
