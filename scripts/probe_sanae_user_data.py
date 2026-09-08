@@ -65,7 +65,7 @@ HOOK = r'''
            the shield (only useful for designing the umbrella scenarios). */
         static int namesLogged = 0;
         if (!namesLogged && runnerProbe && frame > 0) {
-            char namesBuf[900] = "";
+            char namesBuf[1600] = "";
             for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i) {
                 const char *on = runnerProbe->dataWin->objt.objects[i].name;
                 if (!on) continue;
@@ -73,7 +73,7 @@ HOOK = r'''
                     strstr(on, "spawn") || strstr(on, "Kogasa") || strstr(on, "KIRISA") ||
                     (strstr(on, "item") || strstr(on, "take")) ||
                     (!strncmp(on, "obj_app_", 8))) {
-                    if (strlen(namesBuf) < 1300) { strcat(namesBuf, on); strcat(namesBuf, ","); }
+                    if (strlen(namesBuf) < 1500) { strcat(namesBuf, on); strcat(namesBuf, ","); }
                 }
             }
             logInfo("SANAE_NAMES %s\n", namesBuf[0] ? namesBuf : "-");
