@@ -9,14 +9,17 @@ This project follows the same recipe as the TH06/TH07/TH08 Switch ports
 DirectSound/DirectInput/GDI by their original names, and the platform
 difference is confined to the compatibility layer in `port/`.
 
-> ⚠️ **Status: bring-up (Phase 1 complete, Phase 2 in progress).**
-> Phase 1 — the pinned upstream reconstruction (88 translation units) now
-> compiles cleanly against the port layer for 64-bit platforms, and every
-> platform symbol the game references is implemented by `port/`. The host
-> CI job builds the full x86-64 Linux binary.
-> Phase 2 — the Switch runtime (`port/runtime/switch_runtime.cpp`), the
-> GLES3 renderer path, NACP/icon, and the CI NRO job are in progress.
-> **There is no runnable Switch NRO in this folder yet.**
+> **Status: the Switch NRO builds.** Phase 1 — the pinned upstream
+> reconstruction (88 translation units) compiles cleanly against the port
+> layer for 64-bit platforms, and every platform symbol the game references
+> is implemented by `port/`. The host CI job builds the full x86-64 Linux
+> binary. Phase 2 — the Switch runtime (`port/runtime/switch_runtime.cpp`),
+> the GLES3 fixed-function renderer, NACP/icon and the CI NRO job are in
+> place: the `switch` CI job compiles the port with the devkitA64 toolchain
+> inside the official `devkitpro/devkita64` image and publishes a
+> **`th095.nro`** artifact. The NRO is built but **not yet verified on
+> hardware** — first-boot bring-up (data dir, audio, gamepad) is the next
+> milestone.
 
 ---
 
@@ -40,7 +43,7 @@ fonts or artwork are distributed here.
 
 ```text
 sd:/switch/th095/
-    ├── th095.nro          # (Phase 2) the homebrew executable
+    ├── th095.nro          # the homebrew executable (CI artifact: th095-switch)
     ├── th095.dat          # main game archive (your copy)
     ├── thbgm.dat          # BGM archive (your copy)
     └── msgothic.ttc       # Japanese font (ships with the Windows release)
@@ -82,7 +85,7 @@ th095/build-host/th095-host --data-dir build-inputs/th095-data
 
 ```text
 th095/
-├── CMakeLists.txt          # host + (Phase 2) NINTENDO_SWITCH branches
+├── CMakeLists.txt          # host + NINTENDO_SWITCH branches
 ├── README.md
 ├── TH095_INSTALL.txt       # user-facing installation instructions
 ├── upstream.json           # pinned N0zoM1z0/th095 commit
@@ -91,7 +94,7 @@ th095/
 │   ├── ATTRIBUTION.md
 │   ├── include/            # fake Win32/DX headers
 │   ├── compat/             # Win32/D3D8/DirectSound/GDI compatibility
-│   └── runtime/            # linux_runtime.cpp (+ switch_runtime.cpp, Phase 2)
+│   └── runtime/            # linux_runtime.cpp, switch_runtime.cpp
 └── scripts/
     ├── fetch_upstream.py   # pinned upstream fetch → build-inputs/
     └── patch_upstream.py   # documented port source patches
