@@ -1,17 +1,25 @@
 from pathlib import Path
+import os
 import struct
 import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-import patch_nso as nso
-import runner_exit as ex
-from unicorn import Uc, UC_ARCH_ARM64, UC_MODE_ARM, UC_HOOK_CODE, UC_HOOK_INTR
-from unicorn.arm64_const import *
+try:
+    import patch_nso as nso
+    import runner_exit as ex
+    from unicorn import Uc, UC_ARCH_ARM64, UC_MODE_ARM, UC_HOOK_CODE, UC_HOOK_INTR
+    from unicorn.arm64_const import *
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT/'build-inputs/runtime-2024.14.3.260/bin/main'
+SRC = Path(os.environ['SANAE_RUNTIME_MAIN']) if os.environ.get('SANAE_RUNTIME_MAIN') else None
 
+
+@unittest.skipUnless(HAS_DEPS and SRC is not None and SRC.is_file(),
+                     'Private integration test: set SANAE_RUNTIME_MAIN and install requirements-patch.txt')
 
 class ExitTests(unittest.TestCase):
     @classmethod

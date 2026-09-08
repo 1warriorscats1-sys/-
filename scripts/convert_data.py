@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Convert a GameMaker 2024.11/2024.12 data file to the 2024.14 layout.
 
-SANAE's Sylphid Breeze ships a data.win built with GameMaker 2024.11, but the
-only Switch runner available (and the only one new enough to run the game at
-all) is 2024.14.4.268.  Two things changed in the data format in between:
+SANAE's Sylphid Breeze ships a data.win built with GameMaker 2024.11, and this compatibility toolkit targets a separately supplied
+Switch runner 2024.14.3.260.  Two things changed in the data format in between:
 
   * 2024.13 - every room gained an `InstanceCreationOrderIDs` pointer, inserted
     after the `Tiles` pointer.  Without it the runner reads the room's layer
