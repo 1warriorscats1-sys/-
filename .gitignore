@@ -1,0 +1,32 @@
+# User-owned inputs and locally generated files: never publish.
+/local-inputs/
+/build-inputs/
+/sdcard-pack*/
+*.win
+*.dat
+*.exe
+*.dll
+*.nsp
+*.nca
+*.nro
+*.nrr
+*.npdm
+*.nso
+*.zip
+*.7z
+*.xz
+*.keys
+keys.dat
+prod.keys
+# Raw ExeFS binaries (no extension)
+main
+sdk
+rtld
+subsdk*
+/work/
+/build-*/
+/dist/
+__pycache__/
+*.pyc
+.venv/
+.cache/
