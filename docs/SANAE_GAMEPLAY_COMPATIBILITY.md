@@ -65,3 +65,7 @@ and NRO validation remain pending. Artwork has separate rights, see
 Public Python suite: 51 tests, 40 passed, 11 skipped in the local Pillow venv.
 Integrated native collision/save/window tests and ASan/UBSan OpenAL harness passed.
 These are host checks, not a fully sanitized VM or a Switch gameplay test.
+
+A public synthetic runner test also executes `Runner_reset`, `beginFrame` and two
+real `Runner_step` calls: two connected pads produce exactly two async discovery
+maps on the first step and no additional discoveries on the second step.

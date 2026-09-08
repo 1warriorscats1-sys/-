@@ -13,6 +13,9 @@
 #include "log.h"
 #include "gml_array.h"
 #include "spatial_grid.h"
+#include "noop_renderer.h"
+#include "noop_audio_system.h"
+#include "noop_file_system.h"
 void platformLog(const logType type, const char *format, va_list args) {
     (void)type; vfprintf(stderr, format, args);
 }
@@ -30,6 +33,34 @@ static void has(FileSystem *fs, const char *path, const char *text) {
     char *actual = fs->vtable->readFileText(fs, path);
     if (!actual || !strstr(actual, text)) fprintf(stderr, "File %s expected [%s], got [%s]\n", path, text, actual ? actual : "NULL");
     assert(actual && strstr(actual, text)); free(actual);
+}
+static void restart_gamepads(void) {
+    DataWin dw = {0}; Room room = {.name="synthetic", .width=480, .height=270, .speed=60};
+    dw.gen8.wadVersion=17; dw.room.count=1; dw.room.rooms=&room;
+    VMContext *vm=VM_create(&dw);
+    Renderer *renderer=NoopRenderer_create();
+    AudioSystem *audio=(AudioSystem*)NoopAudioSystem_create();
+    FileSystem *fs=NoopFileSystem_create();
+    Runner *runner=Runner_create(&dw,vm,renderer,fs,audio,1);
+    /* Simulate pads still physically connected when game_restart resets GML. */
+    runner->gamepads->slots[0].connected=runner->gamepads->slots[0].connectedPrev=true;
+    runner->gamepads->slots[7].connected=runner->gamepads->slots[7].connectedPrev=true;
+    runner->sanaeRediscoverGamepads=false;
+    Runner_reset(runner);
+    assert(runner->sanaeRediscoverGamepads);
+    assert(runner->gamepads->slots[0].connected && runner->gamepads->slots[7].connected);
+    RunnerGamepad_beginFrame(runner->gamepads); /* must not erase rediscovery */
+    runner->currentRoom=&room; runner->currentRoomIndex=0;
+    Runner_step(runner);
+    assert(!runner->sanaeRediscoverGamepads);
+    assert(arrlen(runner->dsMapPool)==2); /* one async map per connected pad, not all 16 */
+    RunnerGamepad_beginFrame(runner->gamepads);
+    Runner_step(runner);
+    assert(arrlen(runner->dsMapPool)==2); /* no duplicate discoveries next frame */
+    Runner_free(runner); VM_free(vm);
+    renderer->vtable->destroy(renderer);
+    audio->vtable->destroy(audio); NoopFileSystem_destroy(fs);
+    puts("game_restart: connected pads retained, discovery after beginFrame once per pad, no duplicates passed.");
 }
 static void collision_arrays(void) {
     DataWin dw = {0}; Runner runner = {0}; VMContext vm = {0};
@@ -70,6 +101,7 @@ static void collision_arrays(void) {
 }
 int main(void) {
     collision_arrays();
+    restart_gamepads();
     DataWin dw = {0}; Runner runner = {0}; VMContext vm = {0};
     RValue ini = string("progress.ini"), second = string("next.ini");
     RValue fields[] = {string("progress"), string("stage"), RValue_makeReal(3)};

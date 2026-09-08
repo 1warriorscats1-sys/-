@@ -1,4 +1,4 @@
-# Array collisions, controller rediscovery on restart and requested cover; NACP 01.01.
+# Array collisions, controller rediscovery on restart and requested cover; NACP 01.01. Reset lifecycle regression included.
 name: SANAE experimental open NRO
 
 on:
