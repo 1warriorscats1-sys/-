@@ -1,3 +1,4 @@
+# Window controls disabled on Switch; regression test and NACP 01.01.
 name: SANAE experimental open NRO
 
 on:
@@ -51,3 +52,4 @@ jobs:
             dist/sanae/switch/SANAE-experimental-switch.zip
             dist/sanae/switch/sanae-source.tar.gz
             dist/sanae/switch/BUILD.json
+            dist/sanae/switch/sanae-symbols.zip

@@ -97,6 +97,21 @@ static void sanae_register(VMContext *ctx, const char *name, BuiltinFunc functio
     if (index >= 0) ctx->builtinMap[index].value = function;
     else VM_registerBuiltin(ctx, name, function);
 }
+static RValue sanae_fullscreen(MAYBE_UNUSED VMContext *ctx, MAYBE_UNUSED RValue *args, MAYBE_UNUSED int32_t count) {
+    return RValue_makeBool(true);
+}
+/* Kept callable on the host for a regression test of the exact Switch policy.
+ * Do not disable surface_resize or display_set_gui_size: those are game drawing,
+ * not desktop window controls. Getters retain the real platform dimensions. */
+void Sanae_registerFixedWindow(VMContext *ctx) {
+    sanae_register(ctx, "window_set_size", sanae_noop);
+    sanae_register(ctx, "window_set_rectangle", sanae_noop);
+    sanae_register(ctx, "window_set_position", sanae_noop);
+    sanae_register(ctx, "window_set_fullscreen", sanae_noop);
+    sanae_register(ctx, "window_set_region_size", sanae_noop);
+    sanae_register(ctx, "window_center", sanae_noop);
+    sanae_register(ctx, "window_get_fullscreen", sanae_fullscreen);
+}
 static void sanae_register_builtins(VMContext *ctx) {
     sanae_register(ctx, "audio_group_set_gain", sanae_group_gain);
     sanae_register(ctx, "audio_group_get_gain", sanae_group_get_gain);
@@ -111,7 +126,6 @@ static void sanae_register_builtins(VMContext *ctx) {
     sanae_register(ctx, "steam_update", sanae_noop);
     sanae_register(ctx, "steam_shutdown", sanae_noop);
 #ifdef __SWITCH__
-    /* Fullscreen console has no desktop window position. */
-    sanae_register(ctx, "window_set_position", sanae_noop);
+    Sanae_registerFixedWindow(ctx);
 #endif
 }

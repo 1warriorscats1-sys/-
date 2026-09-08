@@ -19,6 +19,27 @@ open engine used underneath it. It reads the user's original Steam `data.win` wi
 conversion. The engine revision is pinned in `upstream.json`; our additions are in `sanae/`.
 No proprietary GameMaker/Nintendo runtime or game payload is supplied.
 
+## Hardware feedback and follow-up
+
+The user tested the first NRO: **Nintendo Bluetooth Pro Controller works and the exit
+returns**, but a brief unwanted frame appears during the exit transition. Starting a new
+game crashes before gameplay. A save file exists afterward, which does **not** establish
+correct progress persistence. Reported module ID:
+`8562093015BBCBCD089A6523D7FFC5862E637B8F000000000000000000000000`;
+PC `+0xbe908`, LR `+0xbe8c8`, Data Abort. Root cause is not yet symbolicated or fixed.
+The first artifact did not retain its ELF; future builds package the exact ELF separately
+in `sanae-symbols.zip` with line information. These new symbols cannot be used as though
+they matched the old build's offsets.
+
+Follow-up: Switch window size/rectangle/position/fullscreen/region-size/centering calls
+are no-ops. Physical size getters remain intact and fullscreen reports true. Surface and
+GUI sizing remain untouched. A host regression test verifies the same registration policy
+blocks backend resize calls. This is **not yet a hardware-verified flicker fix**, nor a fix
+for the new-game crash or the exit transition. Menu labels/settings may still change in
+game logic; the runtime ignores the window manipulation itself.
+NACP version is now `01.01`, author credit `sorehodoh` (original game developer).
+The missing icon remains outstanding.
+
 ## SANAE-specific changes
 
 - Switch entry point and NACP name identify SANAE; application directory is

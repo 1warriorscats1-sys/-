@@ -15,6 +15,10 @@ void platformLog(const logType type, const char *format, va_list args) {
     (void)type; vfprintf(stderr, format, args);
 }
 
+void Sanae_registerFixedWindow(VMContext *ctx);
+static int resize_calls;
+static void resize_spy(int32_t width, int32_t height) { (void)width; (void)height; ++resize_calls; }
+static bool fixed_size(int32_t *width, int32_t *height) { *width = 1280; *height = 720; return true; }
 static RValue string(const char *s) { return RValue_makeOwnedString(strdup(s)); }
 static RValue invoke(VMContext *ctx, const char *name, RValue *args, int count) {
     BuiltinFunc f = VM_findBuiltin(ctx, name); assert(f); return f(ctx, args, count);
@@ -37,6 +41,28 @@ int main(void) {
     runner.dataWin = &dw; runner.vmContext = &vm; runner.fileSystem = fs;
     vm.runner = &runner; vm.dataWin = &dw;
     VMBuiltins_registerAll(&vm);
+    {
+        const char *blocked[] = {"window_set_size", "window_set_rectangle", "window_set_position",
+            "window_set_fullscreen", "window_set_region_size", "window_center"};
+        RValue dimensions[] = {RValue_makeReal(640), RValue_makeReal(480), RValue_makeReal(320), RValue_makeReal(240)};
+        BuiltinFunc surface_resize = VM_findBuiltin(&vm, "surface_resize");
+        BuiltinFunc gui_size = VM_findBuiltin(&vm, "display_set_gui_size");
+        runner.setWindowSize = resize_spy; runner.getWindowSize = fixed_size;
+        /* Positive control: the unmodified desktop handler really calls the backend. */
+        discard(invoke(&vm, "window_set_size", dimensions, 2)); assert(resize_calls == 1);
+        Sanae_registerFixedWindow(&vm); resize_calls = 0;
+        for (unsigned i = 0; i < sizeof(blocked)/sizeof(blocked[0]); ++i) {
+            discard(invoke(&vm, blocked[i], dimensions, 4));
+            discard(invoke(&vm, blocked[i], NULL, 0));
+        }
+        assert(resize_calls == 0);
+        value = invoke(&vm, "window_get_width", NULL, 0); assert(RValue_toReal(value) == 1280);
+        value = invoke(&vm, "window_get_height", NULL, 0); assert(RValue_toReal(value) == 720);
+        value = invoke(&vm, "window_get_fullscreen", NULL, 0); assert(RValue_toBool(value));
+        assert(VM_findBuiltin(&vm, "surface_resize") == surface_resize);
+        assert(VM_findBuiltin(&vm, "display_set_gui_size") == gui_size);
+        puts("Switch window policy: resize blocked, real size getters retained, drawing APIs unchanged.");
+    }
     discard(invoke(&vm, "ini_open", &ini, 1));
     discard(invoke(&vm, "ini_write_real", fields, 3));
     discard(invoke(&vm, "ini_open", &second, 1)); /* implicit close persists first */

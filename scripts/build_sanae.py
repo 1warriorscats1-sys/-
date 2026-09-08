@@ -64,7 +64,7 @@ def main():
     if args.target == 'headless':
         options += ['-DBACKEND=noop', '-DAUDIO_BACKEND=none']
     else:
-        options += ['-DPLATFORM=switch']
+        options += ['-DPLATFORM=switch', '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g1']
     run([args.cmake, '-S', stage, '-B', build, '-G', 'Unix Makefiles', *options])
     run([args.cmake, '--build', build, '--parallel', '4'])
     binary = build/('butterscotch.nro' if args.target == 'switch' else 'butterscotch')
@@ -78,6 +78,7 @@ def main():
     shutil.copy2(binary, named)
     manifest = {'game': "SANAE's Sylphid Breeze", 'status': 'experimental; not hardware-verified',
                 'engine': PIN, 'target': args.target, 'cmake_options': options,
+                'display_version': '01.01', 'game_author': 'sorehodoh',
                 'sha256': hashlib.sha256(named.read_bytes()).hexdigest(),
                 'save_directory': 'sdmc:/switch/sanae/saves', 'game_data_included': False}
     (output/'BUILD.json').write_text(json.dumps(manifest, indent=2)+'\n')
@@ -90,6 +91,20 @@ def main():
             archive.add(ROOT/relative, arcname='integration/'+relative)
         archive.add(output/'BUILD.json', arcname='BUILD.json')
     if args.target == 'switch':
+        # Retain the exact linked ELF for future Atmosphere PC/build-ID matching.
+        # It is diagnostic source-engine output, not an extra file for the SD card.
+        elf = None
+        for candidate in [build/'butterscotch.elf', build/'butterscotch']:
+            if candidate.is_file():
+                with candidate.open('rb') as stream:
+                    if stream.read(4) == b'\x7fELF':
+                        elf = candidate
+                        break
+        if elf is None:
+            raise RuntimeError('Switch ELF missing; refusing to publish without crash symbols')
+        with zipfile.ZipFile(output/'sanae-symbols.zip', 'w', zipfile.ZIP_DEFLATED) as symbols:
+            symbols.write(elf, 'sanae.elf')
+            symbols.write(output/'BUILD.json', 'BUILD.json')
         instructions = (ROOT/'open-runner/SANAE_INSTALL.txt').read_text()
         with zipfile.ZipFile(output/'SANAE-experimental-switch.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
             archive.write(named, 'switch/sanae/sanae.nro')

@@ -24,7 +24,7 @@ def apply(source: Path):
             shutil.copy2(p, source / 'src' / p.name)
     shutil.copy2(OVERLAY / 'main.c', source / 'src/switch/main.c')
     replace('CMakeLists.txt', 'NAME "Butterscotch" AUTHOR "Butterscotch" VERSION "1.0.0"',
-            'NAME "SANAE - Sylphid Breeze" AUTHOR "SANAE port / Butterscotch" VERSION "0.1.0"')
+            'NAME "SANAE - Sylphid Breeze" AUTHOR "sorehodoh" VERSION "01.01"')
 
     replace('src/vm_builtins.c', '// ===[ REGISTRATION ]===',
             '#include "sanae_builtins.inc"\n\n// ===[ REGISTRATION ]===')

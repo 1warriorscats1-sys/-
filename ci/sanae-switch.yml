@@ -37,3 +37,4 @@ jobs:
             dist/sanae/switch/SANAE-experimental-switch.zip
             dist/sanae/switch/sanae-source.tar.gz
             dist/sanae/switch/BUILD.json
+            dist/sanae/switch/sanae-symbols.zip
