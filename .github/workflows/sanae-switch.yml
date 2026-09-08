@@ -9,6 +9,9 @@ on:
       - arena/01a081f7-repo
     paths:
       - .github/workflows/sanae-switch.yml
+      - open-runner/**
+      - scripts/**
+      - tests/**
 
 permissions:
   contents: read
