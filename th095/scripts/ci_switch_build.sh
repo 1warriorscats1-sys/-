@@ -82,8 +82,26 @@ if [ "$fetch_status" -ne 0 ] || [ "$patch_status" -ne 0 ] \
 fi
 
 echo "### artifact"
-ls -la th095/build-switch/th095.nro th095/build-switch/th095
+ls -la th095/build-switch/ > /tmp/ci-ls.txt 2>&1
+cat /tmp/ci-ls.txt
+python3 -c 't=open("/tmp/ci-ls.txt").read(); [print("::notice file=th095/scripts/ci_switch_build.sh::build-dir: " + c.replace(chr(10), " \\n ")) for c in [t[i:i+900] for i in range(0, len(t), 900)][:4]]'
 aarch64-none-elf-nx-strings th095/build-switch/th095.nro 2>/dev/null | head -5 || true
+
+# Find the linked ELF (nx_create_nro converts it into th095.nro; keep a
+# deterministic copy for symbol resolution and the th095-elf artifact).
+ELF_FILE=""
+for f in th095/build-switch/*; do
+    [ -f "$f" ] || continue
+    case "$f" in *.nro|*.nacp|*.nhdr|*.symelf|*.txt|*.cmake|*.ninja) continue ;; esac
+    if aarch64-none-elf-readelf -h "$f" >/dev/null 2>&1; then ELF_FILE="$f"; break; fi
+done
+echo "### discovered ELF: $ELF_FILE"
+if [ -n "$ELF_FILE" ] && [ -f "$ELF_FILE" ]; then
+    cp "$ELF_FILE" th095/build-switch/th095.symelf
+    ELF_FILE=th095/build-switch/th095.symelf
+else
+    echo "::error file=th095/scripts/ci_switch_build.sh::no ELF found in th095/build-switch"
+fi
 
 # Crash symbol resolution: if th095/scripts/crash_offsets.txt exists,
 # resolve every offset against the ELF (built with -g) and post the result
@@ -91,8 +109,9 @@ aarch64-none-elf-nx-strings th095/build-switch/th095.nro 2>/dev/null | head -5 |
 if [ -f th095/scripts/crash_offsets.txt ]; then
     {
         echo "### crash offset resolution (ELF: th095/build-switch/th095)"
+        [ -f "$ELF_FILE" ] && echo "### ELF for addr2line: $ELF_FILE ($(stat -c%s "$ELF_FILE") B)"
         for off in $(grep -oE "0x[0-9a-fA-F]+" th095/scripts/crash_offsets.txt); do
-            res=$(aarch64-none-elf-addr2line -f -C -e th095/build-switch/th095 "$off" 2>&1 | tr '\n' ' | ')
+            res=$(aarch64-none-elf-addr2line -f -C -e "$ELF_FILE" "$off" 2>&1 | tr '\n' ' | ')
             echo "$off => $res"
         done
     } > /tmp/ci-syms.txt 2>&1

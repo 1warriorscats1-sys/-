@@ -129,4 +129,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: th095-elf
-          path: th095/build-switch/th095
+          path: th095/build-switch/th095.symelf
