@@ -184,3 +184,9 @@ not relabeled by this patch.
 synthetic libnx inputs, including simultaneous right-stick and valid input.
 The public suite passes locally: 52 total, 41 passed, 11 skipped; native mapping
 and helpers also pass ASan/UBSan. Real controller verification remains necessary.
+
+Controls build passed both CI jobs: https://github.com/1warriorscats1-sys/-/actions/runs/34241537490
+Binary source `3bce43114549a0dbdac6d0681d5929214a958621`.
+Download: https://github.com/1warriorscats1-sys/-/actions/runs/34241537490/artifacts/10062243168
+Artifact 18,717,015 bytes, non-expired at publication. This is a compiled/tested
+control-policy change, not a fresh hardware confirmation.

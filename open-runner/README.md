@@ -11,7 +11,20 @@ See `docs/SANAE_GAMEPLAY_COMPATIBILITY.md`. The latest compilation includes the 
 
 # SANAE — experimental open NRO integration
 
-## Latest floor/HUD/restart repair — SANAE 01.01
+## Latest controls adjustment — SANAE 01.01
+
+**[Download updated NRO](https://github.com/1warriorscats1-sys/-/actions/runs/34241537490/artifacts/10062243168)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34241537490)
+
+Physical A/B actions exchanged; X/Y mapping retained. Right-stick axes, directional
+bits and R3 are disabled. Left stick, D-pad and other buttons are retained.
+Includes all preceding floor/HUD/restart/audio/exit repairs and the requested cover.
+No in-game glyph artwork is changed. Hardware retest remains necessary.
+
+Binary source `3bce43114549a0dbdac6d0681d5929214a958621`;
+artifact `10062243168`, 18,717,015 bytes, non-expired at publication.
+Replace only `sd:/switch/sanae/sanae.nro`; preserve all original data and saves.
+
+## Previous floor/HUD/restart repair — SANAE 01.01
 
 **[Download the new NRO package](https://github.com/1warriorscats1-sys/-/actions/runs/34238437036/artifacts/10060951334)** · [successful CI](https://github.com/1warriorscats1-sys/-/actions/runs/34238437036)
 
