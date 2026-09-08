@@ -13,17 +13,18 @@ Local conversion, checked SD-card layout, and source for the save/exit compatibi
 
 ## New direction: an open NRO that reads original Steam files
 
-**[Open-runner track: Butterscotch](open-runner/README.md)** is now the preferred route for the
-public port. It already has a licensed independent engine and a Switch backend. In local
-headless tests, it loaded the supplied original SANAE `data.win` without conversion, ran the
-title room, and entered the tutorial using synthetic keyboard input. This is **not yet a
-verified playable Switch build**: CSV/audio API compatibility, graphics and device testing remain.
+**[SANAE open NRO integration](open-runner/README.md)** is the preferred route for the
+public port, using Butterscotch as its independent engine. SANAE-specific save/exit, CSV
+and audio additions are implemented and host-tested; the build recipe names the output
+`sanae.nro` and uses `sd:/switch/sanae/`. Original `data.win` is read without conversion.
+**No NRO has been compiled or published yet.** Switch compilation, original CSV/audio
+validation, rendering and real Pro/Joy-Con/save/exit tests remain outstanding.
 See [project comparison and licensing rationale](docs/OPEN_RUNNER_RESEARCH.md).
 
 The instructions below describe the **existing legacy proprietary-runtime toolkit**, not
 installation of a finished open NRO. Do not mix the two engines' data preparation or saves.
 
-## What this project is — and isn't
+## Legacy toolkit: what it is — and isn't
 
 This is a **source-only compatibility toolkit**, not a standalone open-source game engine.
 Unlike the TH06 native port, this implementation depends on a **proprietary GameMaker Switch runtime**.

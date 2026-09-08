@@ -1,0 +1,30 @@
+SANAE's Sylphid Breeze - experimental open Switch port
+
+This is SANAE-specific integration using the independent Butterscotch engine.
+It is not another game, an official release, or a proprietary GameMaker runner.
+Compilation does NOT establish hardware compatibility. Keep your working port.
+
+Copy the switch folder to your SD root. In sd:/switch/sanae/ put ORIGINAL files
+from your own Steam installation, unchanged:
+  sanae.nro
+  data.win
+  audiogroup2.dat through audiogroup17.dat
+  scenario_sanae.csv
+  scenario_sanae_en.csv
+Also copy other original Included Files if supplied with your game (including
+scenaorio_sanae.csv and item.txt when present). No PC conversion is required.
+
+Launch sanae.nro from hbmenu with application/full-memory access, not album mode.
+Do not replace your previous NSP or reuse its saves. The new port uses
+sd:/switch/sanae/saves/ and diagnostics in sd:/switch/sanae/sanae.log.
+
+Use the game's exit option. Save/exit routines and controller support still
+require testing on Switch. Force-closing from HOME, crashes and power failure
+are NOT orderly exits. A .bak file is a previous save generation; keep it if a
+write error is reported. SD failures/power-loss metadata atomicity are not solved
+by these backups. Native binary file handles are not covered by INI/text backup
+rotation. Never promise a bug-free or fully playable build from these tests.
+
+Distributor: ship the matching sanae-source.tar.gz alongside the binary zip,
+with the engine's AGPL license and dependency notices. No game files or closed
+runtime may be included. See integration/open-runner/README.md in that source.
