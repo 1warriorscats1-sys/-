@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import subprocess
 
@@ -17,6 +18,8 @@ def main():
     report = {'status': 'downloading', 'completed': False}
     REPORT.write_text(json.dumps(report))
     try:
+        if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{9,127}', os.environ.get('SANAE_USER_ARCHIVE_ID', '')):
+            raise ValueError('Expected a Google Drive file ID')
         subprocess.run(['gdown', '--id', os.environ['SANAE_USER_ARCHIVE_ID'],
                         '-O', str(archive)], check=True, timeout=300, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         with py7zr.SevenZipFile(archive, 'r') as reader:
