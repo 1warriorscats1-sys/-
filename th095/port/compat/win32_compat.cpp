@@ -620,6 +620,11 @@ int MessageBoxW(HWND, LPCWSTR text, LPCWSTR title, UINT) { fwprintf(stderr, L"%l
 DWORD GetModuleFileNameA(HMODULE, LPSTR buffer, DWORD size)
 {
     ssize_t count = readlink("/proc/self/exe", buffer, size - 1); if (count < 0) return 0;
+    // Windows form: the game splits module paths on '\' (see the port notes
+    // in switch_compat.cpp — a slash path NULL-dereferences in
+    // CPbgFile::GetFullFilePath). TranslatePath() maps them back to '/'.
+    for (ssize_t i = 0; i < count; ++i)
+        if (buffer[i] == '/') buffer[i] = '\\';
     buffer[count] = 0; return static_cast<DWORD>(count);
 }
 DWORD GetConsoleTitleA(LPSTR buffer, DWORD size) { if (size) buffer[0] = 0; return 0; }

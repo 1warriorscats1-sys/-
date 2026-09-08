@@ -997,10 +997,19 @@ DWORD GetModuleFileNameA(HMODULE, LPSTR buffer, DWORD size)
     // The data directory doubles as the "module location": the game compares
     // it with GetStartupInfoA().lpTitle (the data dir + th095.dat) to detect
     // a relative launch.
+    //
+    // Report it in WINDOWS form (backslashes): the 2003-era game code splits
+    // module paths on '\\' — CPbgFile::GetFullFilePath does
+    // strrchr(buffer, '\\') and then writes endOfModulePath[1] WITHOUT a
+    // NULL check, so a slash path NULL-dereferences (crash 2168-0002).
+    // TranslatePath() converts backslashes back to '/' for real file access.
     const char *dataDir = th095_switch_data_dir();
-    strncpy(buffer, dataDir, size - 1);
-    buffer[size - 1] = 0;
-    return static_cast<DWORD>(strlen(buffer));
+    size_t len = strlen(dataDir);
+    if (len > size - 1) len = size - 1;
+    for (size_t i = 0; i < len; ++i)
+        buffer[i] = dataDir[i] == '/' ? '\\' : dataDir[i];
+    buffer[len] = 0;
+    return static_cast<DWORD>(len);
 }
 DWORD GetConsoleTitleA(LPSTR buffer, DWORD size) { if (size) buffer[0] = 0; return 0; }
 
@@ -1020,8 +1029,19 @@ void GetStartupInfoA(STARTUPINFOA *value)
     static bool titleReady;
     if (!titleReady)
     {
-        snprintf(title, sizeof(title), "%s/th095.dat", th095_switch_data_dir());
-        if (access(title, R_OK) != 0)
+        // Probe with the slash form (POSIX fs); report the WINDOWS form —
+        // the game treats lpTitle as a Windows path (see GetModuleFileNameA).
+        const char *dataDir = th095_switch_data_dir();
+        char probe[MAX_PATH + 1];
+        snprintf(probe, sizeof(probe), "%s/th095.dat", dataDir);
+        if (access(probe, R_OK) == 0)
+        {
+            size_t len = strlen(dataDir);
+            for (size_t i = 0; i < len; ++i)
+                title[i] = dataDir[i] == '/' ? '\\' : dataDir[i];
+            strcpy(title + len, "\\th095.dat");
+        }
+        else
             title[0] = 0; // no data yet: pretend lpTitle is absent
         titleReady = true;
     }
