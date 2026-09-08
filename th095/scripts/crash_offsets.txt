@@ -1,24 +1,32 @@
-# Atmosphere crash 2026-09-08 (module base 0x0000000583c22000, end 0x0000000584287000).
-# Instruction Abort, PC 0x00000005844ac4f0 (= +0x88A4F0, OUTSIDE module).
-# Crashed thread 0x79a (1 MiB stack = CreateThread); main thread 0x78d alive.
-# Crashed thread:
-0x1e620   # LR
-0x1b238   # ReturnAddress[0]
-0x1b484   # ReturnAddress[1]
-0x252b0   # ReturnAddress[2]
-0x62d694  # ReturnAddress[3]
-0x630b18  # ReturnAddress[4]
-# Main thread:
-0x24c7dc  # PC
-0x24c778  # LR
-0x24f390  # ReturnAddress[0]
-0x24a8fc  # ReturnAddress[1]
-0xc3448   # ReturnAddress[2]
-0x636cc   # ReturnAddress[3]
-0x233a0   # ReturnAddress[4]
-0xf9f0    # ReturnAddress[5]
-0x11c70   # ReturnAddress[6]
-0x13d8    # ReturnAddress[7]
-0x1060    # ReturnAddress[8]
-0x62d888  # ReturnAddress[10]
-0x6b0bd8  # ReturnAddress[11] (outside module end 0x665000)
+# Atmosphere crash 2026-09-08 #2 (module base 0xfc45c000, end 0xfcac1000).
+# Data Abort, Fault Address 0x0 (NULL deref), main thread.
+# X0=0, X1=mod+0x666cb8, X3=-0x30, X8=-1, X10=0xaaaaaaaaa00000.
+# Stack holds "sdmc:/switch/th095" — data dir found.
+# Sound worker (thread 01) now idles in its sleep loop (crash #1 fixed).
+# Crashed thread (main):
+0x1e118   # PC
+0x1e110   # LR
+0x1e1e4   # ReturnAddress[0]
+0x1d8f0   # ReturnAddress[1]
+0x1daec   # ReturnAddress[2]
+0x10afc   # ReturnAddress[3]
+0x10df8   # ReturnAddress[4]
+0xe1a4    # ReturnAddress[5]
+0x10220   # ReturnAddress[6]
+0x11cc0   # ReturnAddress[7]
+# Thread 01 (sound worker, idle — context):
+0x629654  # PC
+0x62dd0c  # LR
+0x664194  # ReturnAddress[0]
+0x1af14   # ReturnAddress[1]
+0x1b380   # ReturnAddress[2]
+0x1b484   # ReturnAddress[3]
+0x252c0   # ReturnAddress[4]
+# Thread 02 (context):
+0x6296a4  # PC
+0x62a158  # LR
+0x62976c  # ReturnAddress[0]
+0x65aa0   # ReturnAddress[1]
+0x454e0   # ReturnAddress[2]
+0x5d124   # ReturnAddress[3]
+0x64a3c   # ReturnAddress[4]
