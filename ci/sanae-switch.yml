@@ -1,8 +1,12 @@
 # Install as .github/workflows/sanae-switch.yml when workflow writes are allowed.
-# Manual only: avoids consuming Actions quota on every source push.
+# Activation push only (this session branch), then manual where GitHub permits.
+# No build on ordinary source pushes; the workflow file itself must change.
 name: SANAE experimental open NRO
 on:
   workflow_dispatch:
+  push:
+    branches: ['arena/01a080a0-repo']
+    paths: ['.github/workflows/sanae-switch.yml']
 permissions:
   contents: read
 jobs:

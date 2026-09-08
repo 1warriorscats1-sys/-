@@ -128,14 +128,19 @@ dist/sanae/switch/BUILD.json
 ```
 
 `--prepare-only` prepares the SANAE source without claiming to compile anything.
-`ci/sanae-switch.yml` is a manual-only Actions workflow template; copying it to
+`ci/sanae-switch.yml` is an Actions workflow template; copying it to
 `.github/workflows/` requires workflow-write permission on the GitHub connection.
+It runs on an activation push changing that workflow on this session branch, not
+on ordinary source pushes. Manual dispatch is also declared; GitHub may require
+the workflow to exist on the default branch before enabling that dispatch.
 The template builds/tests the headless integration before building the NRO. Its devkitPro
 container uses `latest`, so only the engine source is pinned, not the entire toolchain.
 
 Local Switch compilation is blocked: no installed devkitPro; the official package servers
-and the Docker registry failed TLS access from this sandbox. Previously the GitHub
-connection also rejected workflow writes. A successful upstream engine CI run is not a
+and the Docker registry failed TLS access from this sandbox. A fresh workflow push on
+2026-09-08 was explicitly rejected because the GitHub App lacks `workflows` permission.
+The rejected workflow-only commit was removed locally; the published template remains
+in `ci/`, and no Actions run or NRO artifact was produced. A successful upstream engine CI run is not a
 SANAE build and is not offered as a substitute download.
 
 `build_open_runner.py` remains available for **unmodified upstream comparison probes**;
