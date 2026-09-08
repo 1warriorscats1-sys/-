@@ -152,7 +152,7 @@ HOOK = r'''
             if (bossProbe) bb = Collision_computeBBox(runnerProbe, bossProbe);
             if (guardProbe) gb = Collision_computeBBox(runnerProbe, guardProbe);
 
-            int overBoss = 0, touchBoss = 0, bulletCount = 0;
+            int overBoss = 0, touchBoss = 0, bulletCount = 0, pbul = 0;
             char overlapNames[160] = "";
             char guardOverlapNames[96] = "";
             if (pb.valid && bb.valid) {
@@ -172,10 +172,11 @@ HOOK = r'''
                     int hit = !(pb.left >= ob.right || ob.left >= pb.right || pb.top >= ob.bottom || ob.top >= pb.bottom);
                     if (!hit) continue;
                     bulletCount++;
+                    if (SANAE_BULLET_LIKE(on)) pbul++;
                     if (strlen(overlapNames) < 120 && on) { strcat(overlapNames, on); strcat(overlapNames, ","); }
                 }
             }
-            int guardStarHits = 0;
+            int guardStarHits = 0, gbul = 0;
             if (gb.valid) {
                 int n = (int)arrlen(runnerProbe->instances);
                 for (int i = 0; i < n; ++i) {
@@ -188,6 +189,7 @@ HOOK = r'''
                     int hit = !(gb.left >= ob.right || ob.left >= gb.right || gb.top >= ob.bottom || ob.top >= gb.bottom);
                     if (!hit) continue;
                     guardStarHits++;
+                    if (SANAE_BULLET_LIKE(on)) gbul++;
                     if (strlen(guardOverlapNames) < 72 && on) { strcat(guardOverlapNames, on); strcat(guardOverlapNames, ","); }
                 }
             }
@@ -196,17 +198,17 @@ HOOK = r'''
             int guardDrop = lastGuardHp >= 0 && guardHp >= 0 && guardHp < lastGuardHp - 0.5f;
             int hpChanged = (int)playerHp != lastHp || (int)bossHp != lastBossHp || (int)guardHp != lastGuardHp;
             int periodic = (frame % 300) == 0;
-            int interesting = overBoss || touchBoss || hpChanged || guardStarHits > 0 || bulletCount > 0 || periodic;
+            int interesting = overBoss || touchBoss || hpChanged || guardStarHits > 0 || pbul > 0 || gbul > 0 || periodic;
             if (interesting) {
-                logInfo("SANAE_AUDIT frame=%d room=%s hp=%g boss=%s bhp=%g firstboss=%d over=%d touch=%d bullets=%d ov=%s guard=%g guardstar=%d gov=%s\n",
+                logInfo("SANAE_AUDIT frame=%d room=%s hp=%g boss=%s bhp=%g firstboss=%d over=%d touch=%d pbul=%d bullets=%d ov=%s guard=%g gbul=%d gov=%s\n",
                     frame, roomName, playerHp, bossName ? bossName : "-", bossHp, firstBossFrame,
-                    overBoss, touchBoss, bulletCount, overlapNames[0] ? overlapNames : "-",
-                    guardHp, guardStarHits, guardOverlapNames[0] ? guardOverlapNames : "-");
+                    overBoss, touchBoss, pbul, bulletCount, overlapNames[0] ? overlapNames : "-",
+                    guardHp, gbul, guardOverlapNames[0] ? guardOverlapNames : "-");
             }
             if (playerDrop || guardDrop) {
-                logInfo("SANAE_DROP frame=%d hp=%g dhp=%g bhp=%g guard=%g dghp=%g over=%d touch=%d bullets=%d ov=%s gov=%s\n",
+                logInfo("SANAE_DROP frame=%d hp=%g dhp=%g bhp=%g guard=%g dghp=%g over=%d touch=%d pbul=%d ov=%s gov=%s\n",
                     frame, playerHp, lastHp - playerHp, bossHp, guardHp, lastGuardHp - guardHp,
-                    overBoss, touchBoss, bulletCount, overlapNames[0] ? overlapNames : "-",
+                    overBoss, touchBoss, pbul, overlapNames[0] ? overlapNames : "-",
                     guardOverlapNames[0] ? guardOverlapNames : "-");
             }
             if ((int)playerHp != lastHp) lastHp = (int)playerHp;
@@ -227,9 +229,13 @@ HOOK = r'''
             const char *guardEnv = getenv("SANAE_PROBE_GUARDSPAWN");
             const char *feedEnv = getenv("SANAE_PROBE_FEED");
             const char *captureEnv = getenv("SANAE_PROBE_CAPTURE");
+            const char *entryEnv = getenv("SANAE_PROBE_ENTRY_FRAME");
+            const char *guardFrameEnv = getenv("SANAE_PROBE_GUARDSPAWN_FRAME");
             int chase = chaseEnv && atoi(chaseEnv) > 0;
             int chaseStart = chaseStartEnv ? atoi(chaseStartEnv) : 1500;
             int chaseEnd = chaseEndEnv ? atoi(chaseEndEnv) : 4800;
+            int entryFrame = entryEnv ? atoi(entryEnv) : 1200;
+            int guardFrame = guardFrameEnv ? atoi(guardFrameEnv) : 1300;
             int guardSpawn = guardEnv && atoi(guardEnv) > 0;
             int feed = feedEnv && atoi(feedEnv) > 0;
             int capture = captureEnv && atoi(captureEnv) > 0;
@@ -266,14 +272,14 @@ HOOK = r'''
                 for (int ci = 0; ci < 4 && !probePickupSpawned; ++ci) {
                     for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
                         if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, cand[ci])) {
-                            Runner_createInstance(runnerProbe, playerProbe->x + 96.0f, playerProbe->y, (int)i);
+                            Runner_createInstance(runnerProbe, playerProbe->x + 150.0f, playerProbe->y, (int)i);
                             probePickupSpawned = 1;
                             break;
                         }
                 }
             }
 
-            if (guardSpawn && !probeGuardSpawned && !guardProbe && inGame && frame >= 1300 && frame <= 2500 && playerProbe) {
+            if (guardSpawn && !probeGuardSpawned && !guardProbe && inGame && frame >= guardFrame && frame <= guardFrame + 1000 && playerProbe) {
                 for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
                     if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, "obj_p01s02e02_gurad")) {
                         Runner_createInstance(runnerProbe, playerProbe->x + 40.0f, playerProbe->y, (int)i);
@@ -282,20 +288,21 @@ HOOK = r'''
                 probeGuardSpawned = 1;
             }
 
-            if (feed && guardProbe && runnerProbe && frame >= 1300 && frame <= 2300 && frame % 40 == 0) {
+            if (feed && guardProbe && runnerProbe && frame >= 1700 && frame <= 2500 && frame % 40 == 0) {
                 const char *spawn = "obj_b02e03_starS_shot";
-                float x = guardProbe->x + 24, y = guardProbe->y - 10;
+                float x = guardProbe->x + 55, y = guardProbe->y - 10;
                 for (int k = 0; k < 3; ++k) {
                     for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
                         if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, spawn)) {
-                            Runner_createInstance(runnerProbe, x, y - k * 6, (int)i);
+                            Instance *sInst = Runner_createInstance(runnerProbe, x, y - k * 6, (int)i);
+                            if (sInst) sInst->hspeed = -6.0f;
                             break;
                         }
                 }
             }
 
             if (!strncmp(scenario, "umbrella_room_", 14) && !probeRoomEntered && inGame &&
-                frame >= 1200 && frame <= 3500) {
+                frame >= entryFrame && frame <= 6500) {
                 const char *target = scenario + 14;
                 if (roomNow && !strcmp(roomNow, target)) {
                     probeRoomEntered = 1;
@@ -432,16 +439,16 @@ def parse_audit(log):
     if not events:
         return {'events': 0, 'boss_vars': boss_vars, 'guard_vars': guard_vars, 'names': names}
     over_frames = [e for e in events if e.get('over') == '1']
-    contact_frames = [e for e in over_frames if e.get('bullets') == '0']
-    touch_only_frames = [e for e in events if e.get('over') == '0' and e.get('touch') == '1' and e.get('bullets') == '0']
+    contact_frames = [e for e in over_frames if e.get('pbul') == '0']
+    touch_only_frames = [e for e in events if e.get('over') == '0' and e.get('touch') == '1' and e.get('pbul') == '0']
     drops_with_boss = [d for d in drops if d.get('over') == '1']
-    drops_with_boss_no_bullets = [d for d in drops_with_boss if d.get('bullets') == '0']
+    drops_with_boss_no_bullets = [d for d in drops_with_boss if d.get('pbul') == '0']
     guard_drops = [d for d in drops if d.get('dghp') not in (None, '', '0', '-')]
     guard_hits = 0
     guard_first = None
     guard_hp_min = None
     for e in events:
-        if e.get('guardstar') not in (None, '', '0'):
+        if e.get('gbul') not in (None, '', '0'):
             guard_hits += 1
         try:
             g = float(e['guard'])
@@ -481,9 +488,9 @@ def parse_audit(log):
         'names': names,
         'boss_vars': boss_vars,
         'guard_vars': guard_vars,
-        'drop_details': [{**{k: d.get(k, '') for k in ('frame', 'hp', 'dhp', 'bhp', 'guard', 'dghp', 'over', 'touch', 'bullets')},
+        'drop_details': [{**{k: d.get(k, '') for k in ('frame', 'hp', 'dhp', 'bhp', 'guard', 'dghp', 'over', 'touch', 'pbul')},
                            'ov': (d.get('ov') or '')[:80], 'gov': (d.get('gov') or '')[:80]} for d in drop_sample],
-        'sample': [{k: e.get(k, '') for k in ('frame', 'room', 'hp', 'over', 'touch', 'bullets', 'guard', 'guardstar')} for e in sample],
+        'sample': [{k: e.get(k, '') for k in ('frame', 'room', 'hp', 'over', 'touch', 'pbul', 'guard', 'gbul')} for e in sample],
     }
 
 
@@ -509,7 +516,8 @@ def main():
     work.mkdir(parents=True, exist_ok=True)
     report['probes'] = []
     try:
-        modified = original.replace(include_anchor, include_anchor + '#include "collision.h"\n')
+        macro = '#define SANAE_BULLET_LIKE(n) ((n) && (strstr((n), "shot") || strstr((n), "star") || strstr((n), "laser") || strstr((n), "e001") || strstr((n), "e013") || strstr((n), "e02")))\n'
+        modified = original.replace(include_anchor, include_anchor + '#include "collision.h"\n' + macro)
         modified = modified.replace(function_anchor, 'bool platformHandleEvents(void) {' + HOOK + '\n    return false;\n}')
         backend.write_text(modified)
         subprocess.run(['cmake', '--build', '.cache/sanae-build-headless', '--parallel', '4'], cwd=ROOT, check=True)
@@ -520,10 +528,13 @@ def main():
                                                  'SANAE_PROBE_CHASE_END': '1650'}),
                      ('room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1',
                                                   'SANAE_PROBE_CHASE_END': '7900'}),
-                     ('umbrella', {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_FEED': '1'}),
+                     ('umbrella', {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_FEED': '1',
+                                   'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_GUARDSPAWN_FRAME': '2250'}),
                      ('umbrella_room_' + marisa_rooms[0],
-                      {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_GUARDSPAWN': '1',
-                       'SANAE_PROBE_CHASE': '1', 'SANAE_PROBE_CHASE_END': '7900'})]
+                      {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_ENTRY_FRAME': '2400',
+                       'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_GUARDSPAWN_FRAME': '2700',
+                       'SANAE_PROBE_CHASE': '1', 'SANAE_PROBE_CHASE_START': '2900',
+                       'SANAE_PROBE_CHASE_END': '7900'})]
         for index, (scenario, probe_env) in enumerate(scenarios):
             case = work / str(index)
             case.mkdir(exist_ok=True)
@@ -552,28 +563,30 @@ def main():
                 frames = [1100, 1800, 2800, 4200, 6200, 7900]
                 z_taps(30, 660, 7950)
             elif scenario == 'umbrella':
-                # Capture the Kogasa umbrella: the hook drops obj_ES02_TATARAKogasa
-                # next to Sanae at 620 (mode_catch=1, per the docs harness);
-                # Down (40) consumes the capture and sets the ability; X raises
-                # the shield; stars are then hand-fed (durability/break test).
+                # Capture: hook drops obj_ES02_TATARAKogasa 150px ahead at 620;
+                # hold Z (attack/vacuum) to catch her, Down consumes the capture
+                # (sets Kogasa ability), X raises the shield, stars are then
+                # hand-fed with leftward velocity (durability/break test).
                 start_keys(inputs, edge)
                 end = 2600
-                frames = [700, 950, 1200, 1600, 2200, 2550]
-                for down in range(760, 1080, 80):
-                    edge(down, 40)
-                edge(1200, 88, 800)   # hold X: raise/keep the umbrella shield
+                frames = [900, 1300, 1700, 2100, 2450]
+                edge(700, 90, 800)         # attack/vacuum 700-1500
+                for down in range(1120, 1520, 80):
+                    edge(down, 40)         # consume the capture
+                edge(1600, 88, 850)        # raise the shield 1600-2450
             elif scenario.startswith('umbrella_room_'):
-                # Same Kogasa capture in the tutorial, then the real Marisa
-                # room at 1500; Z taps dismiss the fight dialog; chase drags
-                # guard+Sanae into the boss pattern. Direct guard spawn stays
-                # a frame-1300 fallback if capture produced no guard.
+                # Capture in the tutorial (vacuum + Down + X raise by 2000),
+                # enter the Marisa room at 2400, Z taps dismiss the fight
+                # dialog, chase drags guard+Sanae through the boss patterns.
+                # Direct guard spawn at 2700 remains if capture produced none.
                 start_keys(inputs, edge)
                 end = 8000
-                frames = [1000, 1500, 2100, 3200, 4800, 6500, 7900]
-                for down in range(760, 1080, 80):
-                    edge(down, 40)
-                edge(1300, 88, 6500)   # hold X: keep the shield up
-                z_taps(30, 1560, 7950)  # advance the fight dialog
+                frames = [1300, 2000, 2600, 3400, 4800, 6500, 7900]
+                edge(700, 90, 800)         # attack/vacuum 700-1500
+                for down in range(1120, 1520, 80):
+                    edge(down, 40)         # consume the capture
+                edge(1800, 88, 6100)       # hold X: raise + keep the shield
+                z_taps(30, 2500, 7950)     # dismiss fight dialog, keep firing
             (case / 'inputs.json').write_text(json.dumps(inputs))
             args = [str(ROOT / '.cache/sanae-build-headless/butterscotch'), str(data),
                     '--headless', '--exit-at-frame', str(end), '--playback-inputs', str(case / 'inputs.json'),
@@ -593,10 +606,13 @@ def main():
                 log = (error.stdout or b'').decode(errors='replace')
                 code = 'timeout'
             (case / 'private.log').write_text(log)
+            audit = parse_audit(log)
+            if index != 0:
+                audit['names'] = ''
             record = {'scenario': scenario, 'exit': code,
                       'missing_csv_count': log.count('missing/invalid CSV'),
                       'unknown_function_count': log.count('Unknown function'),
-                      'audit': parse_audit(log),
+                      'audit': audit,
                       'snapshots': merge_snapshots([summarize(p) for p in sorted(case.glob('state-*.json'))])}
             if code not in (0,):
                 # Reproduce under gdb so the abort/segv site is visible in the report.
