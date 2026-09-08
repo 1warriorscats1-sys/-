@@ -89,6 +89,67 @@ static RValue builtin_ini_open(VMContext* ctx, RValue* args, int32_t argCount) {
         if (runner->currentIni != nullptr) return RValue_makeUndefined();
     }''')
 
+    # The slot-major dedup order depends on collision target IDs. SANAE's
+    # bilateral contact/capture scripts require later concrete objects first:
+    # player/vacuum must observe the enemy before its damage/destroy handler.
+    # Build the collision responder list in descending resource order once,
+    # without changing subtype resolution, instance order or other events.
+    replace('src/runner.c', """                arrput(runner->objectsWithAnyEventOfType[t], obj);
+            }
+        }
+    }
+
+    free(seen);""", """                arrput(runner->objectsWithAnyEventOfType[t], obj);
+            }
+        }
+        if (t == EVENT_COLLISION) {
+            // SANAE: resource order, not the incidental first target slot.
+            arrsetlen(runner->objectsWithAnyEventOfType[t], 0);
+            for (int32_t obj = objectCount; obj-- > 0;) {
+                if (seen[obj]) arrput(runner->objectsWithAnyEventOfType[t], obj);
+            }
+        }
+    }
+
+    free(seen);""")
+
+    replace('src/runner.c', 'static void dispatchCollisionEvents(Runner* runner) {',
+            '#include "sanae_collision_dispatch.inc"\n\n'
+            'static void dispatchCollisionEvents(Runner* runner) {\n'
+            '    struct { uint64_t key; uint8_t value; } *sanaePairs = nullptr;')
+    replace('src/runner.c', '                    if (other == self) continue;', """                    if (other == self) continue;
+                    if (!self->active) break;
+                    // Resolve the most specific applicable target once per pair.
+                    if (evt != findSymmetricCollisionEvent(runner, self, other)) continue;
+                    uint32_t lo = self->instanceId < other->instanceId ? self->instanceId : other->instanceId;
+                    uint32_t hi = self->instanceId < other->instanceId ? other->instanceId : self->instanceId;
+                    uint64_t sanaePairKey = ((uint64_t)lo << 32) | hi;
+                    if (hmgeti(sanaePairs, sanaePairKey) >= 0) continue;""")
+    replace('src/runner.c', '                    // Collision detected! If either instance is solid, restore both to xprevious/yprevious.',
+            '                    hmput(sanaePairs, sanaePairKey, 1);\n\n'
+            '                    // Collision detected! If either instance is solid, restore both to xprevious/yprevious.')
+    # Replace the pinned solid-only reverse notification block, retaining the
+    # existing solid rollback/path/precise-mask logic on either side of it.
+    collision_source = (source / 'src/runner.c').read_text()
+    first = '#ifdef ENABLE_VM_TRACING\n                    if (traceThisPair) logInfo("  fire self->other:'
+    last = '                    // Native parity for solids: collision event can alter path state'
+    if collision_source.count(first) != 1 or collision_source.count(last) != 1:
+        raise RuntimeError('Upstream collision dispatch block drift')
+    begin = collision_source.index(first)
+    end = collision_source.index(last, begin)
+    replace('src/runner.c', collision_source[begin:end],
+            '                    sanaeDispatchCollisionPair(runner, self, other, evt);\n\n')
+    replace('src/runner.c', """        arrsetlen(runner->instanceSnapshots, selfSnapBase);
+    }
+}
+
+// ===[ View Following + Clamping ]===""", """        arrsetlen(runner->instanceSnapshots, selfSnapBase);
+    }
+    hmfree(sanaePairs);
+}
+
+// ===[ View Following + Clamping ]===""")
+
     # SANAE's equal-depth GUI instances are created back-to-front. The pinned
     # runner sorts their IDs descending, so opaque frame backgrounds cover the
     # portrait and HP fill. Keep depth/type and non-instance ordering unchanged.

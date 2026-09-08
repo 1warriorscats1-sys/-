@@ -1,4 +1,4 @@
-# SANAE input: swap A/B only; disable right-stick axes, synthesized directions and R3.
+# SANAE combat: ordered, bilateral collision dispatch; retain A/B swap and disabled right stick.
 name: SANAE experimental open NRO
 
 on:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Сборка и тестирование интеграции SANAE
         run: python3 scripts/build_sanae.py --target headless
-      - name: Native draw-order and sanitized audio regressions
+      - name: Native combat, draw-order and sanitized audio regressions
         run: python3 scripts/test_sanae_runner.py --sanitize-audio
 
 

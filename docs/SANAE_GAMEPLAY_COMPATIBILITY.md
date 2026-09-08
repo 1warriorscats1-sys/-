@@ -190,3 +190,62 @@ Binary source `3bce43114549a0dbdac6d0681d5929214a958621`.
 Download: https://github.com/1warriorscats1-sys/-/actions/runs/34241537490/artifacts/10062243168
 Artifact 18,717,015 bytes, non-expired at publication. This is a compiled/tested
 control-policy change, not a fresh hardware confirmation.
+
+## Contact damage and suction: bilateral collision dispatch repair
+
+Reproduced with unmodified private Steam data, not inferred from a compilation:
+
+* In the old slot-major responder order, the enemy contact handler set its own
+  damage flag before the player's inherited handler tested that flag. Contact
+  therefore left the player's HP at 100.
+* The enemy suction handler transformed/destroyed the enemy before the reverse
+  notification updated Sanae's capture state. Sorting responders alone repaired
+  ordinary enemies but was insufficient: a suction object created during the
+  collision phase could encounter a catcher whose bucket had already run.
+  Hina/Chen capture then lost the reverse notification at this second collision.
+* Collision responders now have deterministic descending concrete-resource
+  order. Each overlapping instance pair resolves its most-specific inherited
+  handlers, invokes both once in that order, and is recorded in a frame-local
+  pair set. Notification is not conditional on solidity or a second overlap
+  test after movement/destruction. Both descriptors are captured before either
+  handler changes state. Newly created collision participants follow the same
+  pair ordering even if their partner's bucket was already visited.
+* Existing precise masks, solid rollback/path handling, pending-room guards,
+  game-end policy, non-collision event order and input mapping are retained.
+  No HP amount, timer, capture eligibility, game script or data.win is patched.
+
+The public GameMaker HTML5 `scripts/Events.js` in
+https://github.com/YoYoGames/GameMaker-HTML5 documents bilateral notification
+without a solid-only condition. That is supporting event-semantics evidence,
+not proof that every platform/version uses the same resource ordering. The
+ordering policy here is validated against SANAE's original script handshakes;
+we do not claim universal GameMaker or complete-game parity.
+
+### Checks with original game scripts (private diagnostic harness)
+
+An env-gated host-only probe spawned an original enemy spawner at frame 600 near
+Sanae; its original scripts created the actual enemy. No game variables or
+balance values were forced. The hook and game assets are not shipped.
+
+* Contact: HP **100 → 92** at frame 610; original hurt/invulnerability state
+  finishes by frame 700. A second spawned contact gives **84** at frame 810;
+  normal state returns by 900. No permanent invulnerability or manual HP edit.
+* Capture: eleven spawners (`e010`, `e011`, `e020`, `e021`, `e100`, `e110`,
+  `e120`, `es01`, `es02`, `es03`, `es04_tutorial`) all produce `mode_catch=1`,
+  `vacuum_count=1`, `catch_count=1` at frame 610.
+* Down input consumes the capture. Original scripts set the Cirno, Kogasa, Hina
+  and Chen ability identifiers respectively; counters/state clear normally.
+  This verifies acquisition, not every attack or later boss encounter.
+* The no-enemy GLES frame-600 screenshot is byte-identical to the previously
+  repaired floor/HUD screenshot: SHA-256
+  `e3678e8351fd9cb3b9ef6a2c6cce876803e3fd055e6f47ae92005f82df6c2e5d`.
+
+Public synthetic tests run the actual `Runner_step` / VM call path, with original
+synthetic bytecode rather than game content. They cover inherited handler owner,
+child-target precedence, exactly-once notification, both creation orders,
+movement/destruction in the first handler, a new lower-index instance after its
+partner's bucket, solid contacts, one-sided handlers and misses. A negative
+control without the ordering repair failed the contact-order assertion.
+The local Python suite remains 52 tests (41 passed, 11 skipped); native combat,
+window/save/restart/draw tests and sanitized audio tests pass. These are host
+checks, not confirmation on physical Switch hardware or a full playthrough.

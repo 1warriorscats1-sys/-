@@ -99,7 +99,111 @@ static void collision_arrays(void) {
     discard(args[2]); SpatialGrid_free(runner.spatialGrid); shfree(vm.builtinMap);
     puts("instance_place: scalar, arrays, descendants, IDs, inactive, miss, empty and position preservation passed.");
 }
+
+/* Original synthetic bytecode calls a fixture builtin through the real VM.
+ * Lower object is an enemy, higher is a player/vacuum. Slot-major ordering
+ * visits the enemy first because of its unrelated earlier target slot.
+ * Use inherited enemy events too, as the real combat path does. */
+static int combat_calls[4], combat_count, combat_hp, combat_captures;
+static bool combat_damaged, combat_vacuum, combat_spawned;
+enum { COMBAT_NORMAL, COMBAT_MOVE, COMBAT_DESTROY, COMBAT_SPAWN, COMBAT_SOLID, COMBAT_ONESIDED, COMBAT_MISS };
+static int combat_variant;
+static RValue combat_probe(VMContext *ctx, RValue *args, int32_t count) {
+    (void)args; assert(count==0);
+    int object=ctx->currentInstance->objectIndex;
+    assert(ctx->currentEventType==EVENT_COLLISION && combat_count<4);
+    combat_calls[combat_count++]=object;
+    if (object==2) {
+        assert(ctx->otherInstance->objectIndex==1);
+        assert(ctx->currentEventSubtype==1); /* child target overrides parent */
+        if (!combat_damaged || combat_variant==COMBAT_SPAWN) {
+            if (combat_vacuum) ++combat_captures;
+            else combat_hp-=8;
+        }
+        if (combat_variant==COMBAT_MOVE) ctx->currentInstance->x=200;
+        if (combat_variant==COMBAT_DESTROY) Runner_destroyInstance(ctx->runner,ctx->currentInstance,false);
+        if (combat_variant==COMBAT_SPAWN && !combat_spawned) {
+            combat_spawned=true;
+            Runner_createInstance(ctx->runner,10,10,1);
+        }
+    } else {
+        assert(object==1 && ctx->otherInstance->objectIndex==2);
+        assert(ctx->currentEventObjectIndex==0); /* inherited handler owner */
+        combat_damaged=true;
+        if (combat_vacuum) Runner_destroyInstance(ctx->runner,ctx->currentInstance,false);
+    }
+    return RValue_makeReal(0);
+}
+static void combat_events(bool vacuum, bool reversed_creation, int variant) {
+    DataWin dw={0};
+    Room room={.name="synthetic-combat",.width=480,.height=270,.speed=60};
+    Sprite sprite={.width=10,.height=10,.bboxMode=1,.sepMasks=2};
+    GameObject objects[3]={0};
+    EventAction action={.codeId=0};
+    ObjectEvent enemy_events[]={
+        {.eventSubtype=0,.actionCount=1,.actions=&action}, /* earlier unrelated target slot */
+        {.eventSubtype=2,.actionCount=1,.actions=&action}
+    };
+    ObjectEvent player_events[]={
+        {.eventSubtype=0,.actionCount=1,.actions=&action},
+        {.eventSubtype=1,.actionCount=1,.actions=&action}
+    };
+    /* call.i fixture(); popz.v; exit.i -- entirely synthetic, no game code */
+    uint32_t bytecode[]={0xD9020000,0,0x9E050000,0x9D020000};
+    CodeEntry code={.name="synthetic_collision_probe",.length=sizeof(bytecode)};
+    Function function={.name="synthetic_combat_probe",.occurrences=1};
+    for (int i=0;i<3;i++) {
+        objects[i].present=true; objects[i].name="synthetic";
+        objects[i].parentId=-1; objects[i].spriteId=0; objects[i].textureMaskId=-1;
+    }
+    objects[1].parentId=0;
+    objects[1].solid=(variant==COMBAT_SOLID);
+    objects[0].eventLists[EVENT_COLLISION]=(ObjectEventList){.eventCount=2,.events=enemy_events};
+    objects[2].eventLists[EVENT_COLLISION]=(ObjectEventList){.eventCount=2,.events=player_events};
+    if (variant==COMBAT_ONESIDED) objects[2].eventLists[EVENT_COLLISION].eventCount=0;
+    dw.gen8.wadVersion=17; dw.objt.count=3; dw.objt.objects=objects;
+    dw.sprt.count=1; dw.sprt.sprites=&sprite; dw.room.count=1; dw.room.rooms=&room;
+    dw.code.count=1; dw.code.entries=&code;
+    dw.func.functionCount=1; dw.func.functions=&function;
+    dw.bytecodeBuffer=(uint8_t*)bytecode;
+    VMContext *vm=VM_create(&dw);
+    Renderer *renderer=NoopRenderer_create();
+    AudioSystem *audio=(AudioSystem*)NoopAudioSystem_create();
+    FileSystem *fs=NoopFileSystem_create();
+    Runner *runner=Runner_create(&dw,vm,renderer,fs,audio,1);
+    VM_registerBuiltin(vm,"synthetic_combat_probe",combat_probe);
+    vm->funcCallCache[0].builtin=(void*)combat_probe;
+    runner->spatialGrid=SpatialGrid_create(room.width,room.height);
+    runner->currentRoom=&room; runner->currentRoomIndex=0;
+    Runner_createInstance(runner,10,10,reversed_creation ? 2 : 1);
+    Runner_createInstance(runner,variant==COMBAT_MISS ? 100 : 10,10,reversed_creation ? 1 : 2);
+    combat_variant=variant; combat_spawned=false;
+    combat_count=combat_captures=0; combat_hp=100; combat_damaged=false; combat_vacuum=vacuum;
+    Runner_step(runner);
+    int pairs=(variant==COMBAT_SPAWN ? 2 : 1);
+    int calls=variant==COMBAT_MISS ? 0 : variant==COMBAT_ONESIDED ? 1 : 2*pairs;
+    int captures=vacuum && variant!=COMBAT_MISS && variant!=COMBAT_ONESIDED ? pairs : 0;
+    assert(combat_count==calls);
+    if (calls>=2) assert(combat_calls[0]==2 && combat_calls[1]==1);
+    if (calls==1) assert(combat_calls[0]==1);
+    if (pairs==2) assert(combat_calls[2]==2 && combat_calls[3]==1);
+    assert(combat_damaged==(variant!=COMBAT_MISS));
+    assert(combat_hp==(vacuum ? 100 : 92));
+    assert(combat_captures==captures);
+    if (vacuum) {
+        Runner_step(runner);
+        assert(combat_count==calls && combat_captures==captures); /* no destroyed-enemy replay */
+    }
+    Runner_free(runner); VM_free(vm);
+    renderer->vtable->destroy(renderer); audio->vtable->destroy(audio); NoopFileSystem_destroy(fs);
+}
 int main(void) {
+    for (int creation=0;creation<2;creation++) {
+        combat_events(false,creation,COMBAT_NORMAL);
+        for (int variant=COMBAT_NORMAL;variant<=COMBAT_MISS;variant++)
+            combat_events(true,creation,variant);
+    }
+    puts("Combat dispatch: inherited contact damage and capture before destruction; both creation orders, target specificity, motion, first-handler destruction, late spawning, solids, one-sided handlers and misses passed.");
     collision_arrays();
     restart_gamepads();
     DataWin dw = {0}; Runner runner = {0}; VMContext vm = {0};
