@@ -1,0 +1,44 @@
+TH01 — экспериментальный открытый homebrew-порт (NRO)
+====================================================
+
+EN
+--
+1. Copy th01.nro to:  sdmc:/switch/th01/th01.nro
+2. Optional: build your own content package and copy it next to the NRO as
+   sdmc:/switch/th01/th01open.dat  (see docs/TH01_DATA_FORMAT.md).
+   Without it the built-in procedural stage set is played.
+3. Launch it from the homebrew menu. Controls:
+   D-pad / left stick = move, A = launch orb / shoot / rod, B = bomb,
+   X or Y = confirm, Plus = pause, Minus = quit (saves first).
+4. Files created by the port:
+   sdmc:/switch/th01/th01.sav      high score and clear counter
+   sdmc:/switch/th01/th01.sav.bak  one previous save generation
+   sdmc:/switch/th01/th01.log      start-up diagnostics
+
+No game data is included. Game artwork, music and trademarks belong to their
+respective rights holders; this build contains none of them.
+
+RU
+--
+1. Скопируйте th01.nro в:  sdmc:/switch/th01/th01.nro
+2. Необязательно: соберите свой пакет данных и положите его рядом с NRO как
+   sdmc:/switch/th01/th01open.dat  (см. docs/TH01_DATA_FORMAT.md).
+   Если файла нет — играет встроенный процедурный набор этапов.
+3. Запуск из homebrew-меню. Управление:
+   D-pad / левый стик — движение, A — запуск орба / выстрел / жезл, B — бомба,
+   X или Y — подтверждение, Plus — пауза, Minus — выход (с сохранением).
+4. Файлы, которые создаёт порт:
+   sdmc:/switch/th01/th01.sav      рекорд и счётчик прохождений
+   sdmc:/switch/th01/th01.sav.bak  одна предыдущая копия сейва
+   sdmc:/switch/th01/th01.log      диагностика запуска
+
+Данных игры в сборке нет. Графика, музыка и торговые марки принадлежат их
+правообладателям; в этой сборке их нет.
+
+Troubleshooting / Если что-то не так
+------------------------------------
+- Чёрный экран или сразу выход: посмотрите sdmc:/switch/th01/th01.log — туда пишется,
+  найден ли пакет данных и удалось ли инициализировать звук.
+- Нет звука: порт пишет это в лог и продолжает работать без звука.
+- Пакет не читается: прогоните его локально —
+  python3 scripts/pack_th01_data.py --verify th01open.dat
