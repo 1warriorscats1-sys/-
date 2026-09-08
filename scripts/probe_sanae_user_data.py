@@ -69,11 +69,11 @@ HOOK = r'''
             for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i) {
                 const char *on = runnerProbe->dataWin->objt.objects[i].name;
                 if (!on) continue;
-                if (strstr(on, "gurad") || strstr(on, "kasa") || strstr(on, "es02") ||
-                    strstr(on, "Kogasa") || strstr(on, "KIRISA") ||
+                if (strstr(on, "gurad") || strstr(on, "kasa") || strstr(on, "es0") ||
+                    strstr(on, "spawn") || strstr(on, "Kogasa") || strstr(on, "KIRISA") ||
                     (strstr(on, "item") || strstr(on, "take")) ||
                     (!strncmp(on, "obj_app_", 8))) {
-                    if (strlen(namesBuf) < 840) { strcat(namesBuf, on); strcat(namesBuf, ","); }
+                    if (strlen(namesBuf) < 1300) { strcat(namesBuf, on); strcat(namesBuf, ","); }
                 }
             }
             logInfo("SANAE_NAMES %s\n", namesBuf[0] ? namesBuf : "-");
@@ -262,11 +262,11 @@ HOOK = r'''
                Sanae (frame 620); the input side walks her into it (700-920)
                and raises the shield with X from frame 1000 on. */
             if (capture && !probePickupSpawned && inGame && frame >= 620 && frame <= 1200 && playerProbe) {
-                const char *cand[] = {"obj_app_es02", "obj_item_es02", "obj_take_es02"};
-                for (int ci = 0; ci < 3 && !probePickupSpawned; ++ci) {
+                const char *cand[] = {"obj_ES02_TATARAKogasa", "obj_app_es02", "obj_item_es02", "obj_take_es02"};
+                for (int ci = 0; ci < 4 && !probePickupSpawned; ++ci) {
                     for (unsigned i = 0; i < runnerProbe->dataWin->objt.count; ++i)
                         if (!strcmp(runnerProbe->dataWin->objt.objects[i].name, cand[ci])) {
-                            Runner_createInstance(runnerProbe, playerProbe->x + 64.0f, playerProbe->y, (int)i);
+                            Runner_createInstance(runnerProbe, playerProbe->x + 96.0f, playerProbe->y, (int)i);
                             probePickupSpawned = 1;
                             break;
                         }
@@ -343,7 +343,7 @@ def summarize(path):
         variables = instance.get('selfVariables', {})
         actor = {'object': name, 'x': round(instance['x']), 'y': round(instance['y'])}
         for k in ('hp_now', 'hp_max', 'mode_damage', 'mode_invin', 'mode_catch',
-                  'next_break', 'set_action'):
+                  'vacuum_count', 'catch_count', 'next_break', 'set_action'):
             if k in variables and variables[k] is not None:
                 actor[k] = round(variables[k]) if isinstance(variables[k], float) else variables[k]
         result['actors'].append(actor)
@@ -428,7 +428,7 @@ def parse_audit(log):
             f = fields_of(line, 'SANAE_GUARDVAR')
             guard_vars.append('%s=%s' % (f.get('name'), f.get('v')))
         elif line.startswith('SANAE_NAMES'):
-            names = line[len('SANAE_NAMES '):].strip()[:200]
+            names = line[len('SANAE_NAMES '):].strip()[:420]
     if not events:
         return {'events': 0, 'boss_vars': boss_vars, 'guard_vars': guard_vars, 'names': names}
     over_frames = [e for e in events if e.get('over') == '1']
@@ -552,27 +552,28 @@ def main():
                 frames = [1100, 1800, 2800, 4200, 6200, 7900]
                 z_taps(30, 660, 7950)
             elif scenario == 'umbrella':
-                # Tutorial: obj_ES02_TATARAKogasa overlaps Sanae's spawn and
-                # contact-damages her (16 HP per tick, run 12). Fight her with
-                # Z (fire) from 700 and watch whether she drops the umbrella
-                # ability or a guard appears; stars are hand-fed if a guard
-                # shows up (durability/break test).
+                # Capture the Kogasa umbrella: the hook drops obj_ES02_TATARAKogasa
+                # next to Sanae at 620 (mode_catch=1, per the docs harness);
+                # Down (40) consumes the capture and sets the ability; X raises
+                # the shield; stars are then hand-fed (durability/break test).
                 start_keys(inputs, edge)
                 end = 2600
-                frames = [750, 900, 1300, 1600, 2000, 2500]
-                edge(700, 90, 1850)  # fire at Kogasa through the whole run
-                z_taps(120, 1150, 2550)  # accept any dialog that appears
+                frames = [700, 950, 1200, 1600, 2200, 2550]
+                for down in range(760, 1080, 80):
+                    edge(down, 40)
+                edge(1200, 88, 800)   # hold X: raise/keep the umbrella shield
             elif scenario.startswith('umbrella_room_'):
-                # Fight Kogasa (Z) as in umbrella, enter the real Marisa room
-                # at 1400, dismiss its dialog, chase drags guard+Sanae into the
-                # boss pattern through many phases. Direct guard spawn remains
-                # a frame-1300 fallback if capture produced none.
+                # Same Kogasa capture in the tutorial, then the real Marisa
+                # room at 1500; Z taps dismiss the fight dialog; chase drags
+                # guard+Sanae into the boss pattern. Direct guard spawn stays
+                # a frame-1300 fallback if capture produced no guard.
                 start_keys(inputs, edge)
                 end = 8000
-                frames = [1000, 1500, 2000, 3000, 4500, 6200, 7900]
-                edge(700, 90, 1000)      # fire at Kogasa 700-1700
-                z_taps(30, 900, 7950)    # shots/dialogs throughout
-                edge(1750, 88, 5800)     # hold X: keep the shield up in the fight
+                frames = [1000, 1500, 2100, 3200, 4800, 6500, 7900]
+                for down in range(760, 1080, 80):
+                    edge(down, 40)
+                edge(1300, 88, 6500)   # hold X: keep the shield up
+                z_taps(30, 1560, 7950)  # advance the fight dialog
             (case / 'inputs.json').write_text(json.dumps(inputs))
             args = [str(ROOT / '.cache/sanae-build-headless/butterscotch'), str(data),
                     '--headless', '--exit-at-frame', str(end), '--playback-inputs', str(case / 'inputs.json'),
