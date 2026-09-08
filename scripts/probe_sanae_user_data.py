@@ -409,6 +409,42 @@ def crash_section(log, max_lines=34, width=170):
     return out
 
 
+def trace_summary(log, cap_pairs=3000, cap_fired=200):
+    """Extract collision-dispatch evidence from --trace-collisions/'*' output."""
+    import re as _re
+    pair_re = _re.compile(r'Collision: \[([^ ]+)[^]]*\] vs \[([^ ]+)')
+    aabb_re = _re.compile(r'AABB=(\w+)')
+    fired_re = _re.compile(r'Runner: \[([^\]]+)\] Collision with ([^\s(]+)')
+    key = lambda n: n and ('KIRISAME' in n or 'gurad' in n or 'KOCHIYA' in n)
+    pairs = {'overlap': 0, 'miss': 0, 'involving': 0, 'samples': []}
+    fired = []
+    for line in log.splitlines():
+        m = pair_re.search(line)
+        if m:
+            a, b = m.group(1), m.group(2)
+            if key(a) or key(b):
+                pairs['involving'] += 1
+                am = aabb_re.search(line)
+                kind = am.group(1) if am else '?'
+                if kind == 'overlap':
+                    pairs['overlap'] += 1
+                elif kind == 'miss':
+                    pairs['miss'] += 1
+                if len(pairs['samples']) < cap_pairs:
+                    pairs['samples'].append('%s vs %s AABB=%s' % (a, b, kind))
+                continue
+        fm = fired_re.search(line)
+        if fm:
+            a, b = fm.group(1), fm.group(2)
+            if key(a) or key(b):
+                fired.append('%s -> %s' % (a, b))
+    return {'pair_lines_involving_names': pairs['involving'],
+            'aabb_overlap': pairs['overlap'], 'aabb_miss': pairs['miss'],
+            'fired_collision_events': len(fired),
+            'pair_samples': pairs['samples'][:40],
+            'fired_samples': fired[:60]}
+
+
 def parse_audit(log):
     """Compress SANAE_AUDIT / SANAE_DROP lines into a report-friendly summary."""
     def fields_of(line, prefix):
@@ -528,6 +564,9 @@ def main():
                                                  'SANAE_PROBE_CHASE_END': '1650'}),
                      ('room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1',
                                                   'SANAE_PROBE_CHASE_END': '7900'}),
+                     ('trace_room_' + marisa_rooms[0], {'SANAE_PROBE_CHASE': '1',
+                                                        'SANAE_PROBE_CHASE_START': '1500',
+                                                        'SANAE_PROBE_CHASE_END': '2000'}),
                      ('umbrella', {'SANAE_PROBE_CAPTURE': '1', 'SANAE_PROBE_FEED': '1',
                                    'SANAE_PROBE_GUARDSPAWN': '1', 'SANAE_PROBE_GUARDSPAWN_FRAME': '2250'}),
                      ('umbrella_room_' + marisa_rooms[0],
@@ -554,6 +593,16 @@ def main():
                 frames = [640, 900, 1300, 1650]
             elif scenario == 'baseline':
                 start_keys(inputs, edge)
+            elif scenario.startswith('trace_room_'):
+                # Decisive diagnostic: same real boss-room entry + chase, but
+                # with engine VM tracing so the log shows whether the boss/player
+                # pair AABB-overlaps at DISPATCH time and whether any collision
+                # event fires between them (vs the overlap only existing at
+                # hook time before the game's own step code moves Sanae).
+                start_keys(inputs, edge)
+                end = 2000
+                frames = [1500, 1800, 1950]
+                z_taps(30, 660, 1950)
             elif scenario.startswith('room_'):
                 # pendingRoom at >=600; Z taps dismiss the boss intro dialog
                 # and fire shots; chase parks Sanae on Marisa for ~6400 frames
@@ -594,7 +643,11 @@ def main():
                     '--disable-log-colours']
             for frame in frames:
                 args += ['--dump-frame-json', str(frame)]
-            env = dict(os.environ, SANAE_PRIVATE_SCENARIO=scenario, **probe_env)
+            if scenario.startswith('trace_'):
+                args += ['--trace-collisions', '*', '--trace-events', '*']
+            # The hook keys its deliberate actions off the plain room_ name.
+            probe_scenario = scenario[6:] if scenario.startswith('trace_') else scenario
+            env = dict(os.environ, SANAE_PRIVATE_SCENARIO=probe_scenario, **probe_env)
             log = ''
             code = 0
             try:
@@ -609,7 +662,11 @@ def main():
             audit = parse_audit(log)
             if index != 0:
                 audit['names'] = ''
+            trace = None
+            if scenario.startswith('trace_'):
+                trace = trace_summary(log)
             record = {'scenario': scenario, 'exit': code,
+                      'trace': trace,
                       'missing_csv_count': log.count('missing/invalid CSV'),
                       'unknown_function_count': log.count('Unknown function'),
                       'audit': audit,
